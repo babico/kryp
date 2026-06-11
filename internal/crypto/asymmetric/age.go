@@ -1,6 +1,7 @@
 package asymmetric
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -18,7 +19,8 @@ func (a *AgeEncryptor) Encrypt(plaintext []byte, key []byte) (*core.EncryptionRe
 	if err != nil {
 		return nil, errors.New("age: invalid recipient key: " + err.Error())
 	}
-	stream, err := age.Encrypt(noopWriter{}, parsedKey)
+	var buf bytes.Buffer
+	stream, err := age.Encrypt(&buf, parsedKey)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +34,7 @@ func (a *AgeEncryptor) Encrypt(plaintext []byte, key []byte) (*core.EncryptionRe
 	}
 	return &core.EncryptionResult{
 		Algorithm:  core.AlgoAge,
-		Ciphertext: noopBuf,
+		Ciphertext: buf.Bytes(),
 		Nonce:      nil,
 	}, nil
 }
@@ -42,7 +44,7 @@ func (a *AgeEncryptor) Decrypt(data []byte, key []byte, nonce []byte) ([]byte, e
 	if err != nil {
 		return nil, errors.New("age: invalid identity key: " + err.Error())
 	}
-	stream, err := age.Decrypt(&noopReader{data: data}, identity)
+	stream, err := age.Decrypt(bytes.NewReader(data), identity)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +55,11 @@ func (a *AgeEncryptor) Decrypt(data []byte, key []byte, nonce []byte) ([]byte, e
 		if n > 0 {
 			result = append(result, buf[:n]...)
 		}
-		if err != nil {
+		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	return result, nil
@@ -63,26 +68,3 @@ func (a *AgeEncryptor) Decrypt(data []byte, key []byte, nonce []byte) ([]byte, e
 func (a *AgeEncryptor) NonceSize() int { return 0 }
 
 func (a *AgeEncryptor) KeySize() int { return 0 }
-
-var noopBuf []byte
-
-type noopWriter struct{}
-
-func (n noopWriter) Write(p []byte) (int, error) {
-	noopBuf = append(noopBuf, p...)
-	return len(p), nil
-}
-
-type noopReader struct {
-	data []byte
-	off  int
-}
-
-func (r *noopReader) Read(p []byte) (int, error) {
-	if r.off >= len(r.data) {
-		return 0, io.EOF
-	}
-	nn := copy(p, r.data[r.off:])
-	r.off += nn
-	return nn, nil
-}
