@@ -43,9 +43,6 @@ func (a *ASCON128) Decrypt(data []byte, key []byte, nonce []byte) ([]byte, error
 	return plaintext, nil
 }
 
-func (a *ASCON128) NonceSize() int {
-	c, _ := ascon.New(make([]byte, ascon.KeySize), ascon.Ascon128)
-	return c.NonceSize()
-}
+func (a *ASCON128) NonceSize() int { return 16 }
 
 func (a *ASCON128) KeySize() int { return ascon.KeySize }
