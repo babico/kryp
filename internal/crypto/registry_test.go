@@ -40,7 +40,7 @@ func TestGetEncryptorAge(t *testing.T) {
 }
 
 func TestAllAlgorithmsEmptyData(t *testing.T) {
-	algos := []AlgorithmID{AlgoXChaCha20Poly1305, AlgoChaCha20Poly1305, AlgoAES256GCM, AlgoSecretBox, AlgoAES256CTRHMAC}
+	algos := []AlgorithmID{AlgoXChaCha20Poly1305, AlgoChaCha20Poly1305, AlgoAES256GCM, AlgoSecretBox, AlgoAES256CTRHMAC, AlgoASCON128}
 	algorithms := make([]Encryptor, len(algos))
 	for i, id := range algos {
 		var err error
@@ -73,7 +73,7 @@ func TestAllAlgorithmsEmptyData(t *testing.T) {
 }
 
 func TestAllAlgorithmsLargeData(t *testing.T) {
-	algos := []AlgorithmID{AlgoXChaCha20Poly1305, AlgoChaCha20Poly1305, AlgoAES256GCM, AlgoSecretBox, AlgoAES256CTRHMAC}
+	algos := []AlgorithmID{AlgoXChaCha20Poly1305, AlgoChaCha20Poly1305, AlgoAES256GCM, AlgoSecretBox, AlgoAES256CTRHMAC, AlgoASCON128}
 	algorithms := make([]Encryptor, len(algos))
 	for i, id := range algos {
 		var err error
@@ -974,5 +974,125 @@ func TestEncryptFileAgeFileNotFound(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for missing file")
+	}
+}
+
+func TestHPKEEncryptDecrypt(t *testing.T) {
+	kp, err := GenerateHPKEKeypair()
+	if err != nil {
+		t.Fatalf("GenerateHPKEKeypair: %v", err)
+	}
+
+	enc, _ := GetEncryptor(AlgoHPKE)
+	plaintext := []byte("HPKE unit test")
+
+	result, err := enc.Encrypt(plaintext, kp.PublicKey)
+	if err != nil {
+		t.Fatalf("HPKE Encrypt: %v", err)
+	}
+
+	decrypted, err := enc.Decrypt(result.Ciphertext, kp.PrivateSeed, result.Nonce)
+	if err != nil {
+		t.Fatalf("HPKE Decrypt: %v", err)
+	}
+
+	if string(decrypted) != string(plaintext) {
+		t.Errorf("content mismatch: got %q", string(decrypted))
+	}
+}
+
+func TestMLKEM768EncryptDecrypt(t *testing.T) {
+	kp, err := GenerateMLKEMKeypair()
+	if err != nil {
+		t.Fatalf("GenerateMLKEMKeypair: %v", err)
+	}
+
+	enc, _ := GetEncryptor(AlgoMLKEM768)
+	plaintext := []byte("ML-KEM-768 unit test")
+
+	result, err := enc.Encrypt(plaintext, kp.PublicKey)
+	if err != nil {
+		t.Fatalf("MLKEM768 Encrypt: %v", err)
+	}
+
+	decrypted, err := enc.Decrypt(result.Ciphertext, kp.PrivateSeed, result.Nonce)
+	if err != nil {
+		t.Fatalf("MLKEM768 Decrypt: %v", err)
+	}
+
+	if string(decrypted) != string(plaintext) {
+		t.Errorf("content mismatch: got %q", string(decrypted))
+	}
+}
+
+func TestMLKEM1024EncryptDecrypt(t *testing.T) {
+	kp, err := GenerateMLKEM1024Keypair()
+	if err != nil {
+		t.Fatalf("GenerateMLKEM1024Keypair: %v", err)
+	}
+
+	enc, _ := GetEncryptor(AlgoMLKEM1024)
+	plaintext := []byte("ML-KEM-1024 unit test")
+
+	result, err := enc.Encrypt(plaintext, kp.PublicKey)
+	if err != nil {
+		t.Fatalf("MLKEM1024 Encrypt: %v", err)
+	}
+
+	decrypted, err := enc.Decrypt(result.Ciphertext, kp.PrivateSeed, result.Nonce)
+	if err != nil {
+		t.Fatalf("MLKEM1024 Decrypt: %v", err)
+	}
+
+	if string(decrypted) != string(plaintext) {
+		t.Errorf("content mismatch: got %q", string(decrypted))
+	}
+}
+
+func TestHybridXWingEncryptDecrypt(t *testing.T) {
+	kp, err := GenerateXWingKeypair()
+	if err != nil {
+		t.Fatalf("GenerateXWingKeypair: %v", err)
+	}
+
+	enc, _ := GetEncryptor(AlgoHybridXWing)
+	plaintext := []byte("X-Wing unit test")
+
+	result, err := enc.Encrypt(plaintext, kp.PublicKey)
+	if err != nil {
+		t.Fatalf("XWing Encrypt: %v", err)
+	}
+
+	decrypted, err := enc.Decrypt(result.Ciphertext, kp.PrivateSeed, result.Nonce)
+	if err != nil {
+		t.Fatalf("XWing Decrypt: %v", err)
+	}
+
+	if string(decrypted) != string(plaintext) {
+		t.Errorf("content mismatch: got %q", string(decrypted))
+	}
+}
+
+func TestPQCAlgorithmsWrongKeyFails(t *testing.T) {
+	kp1, err := GenerateMLKEMKeypair()
+	if err != nil {
+		t.Fatalf("GenerateMLKEMKeypair: %v", err)
+	}
+	kp2, err := GenerateMLKEMKeypair()
+	if err != nil {
+		t.Fatalf("GenerateMLKEMKeypair: %v", err)
+	}
+
+	enc, _ := GetEncryptor(AlgoMLKEM768)
+	plaintext := []byte("test data")
+
+	result, err := enc.Encrypt(plaintext, kp1.PublicKey)
+	if err != nil {
+		t.Fatalf("Encrypt: %v", err)
+	}
+
+	_, err = enc.Decrypt(result.Ciphertext, kp2.PrivateSeed, result.Nonce)
+	if err == nil {
+		t.Error("expected error for wrong decryption key")
 	}
 }
