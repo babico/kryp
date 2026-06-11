@@ -9,22 +9,22 @@ import (
 	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
 )
 
+var hpkeSuite = hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
+var hpkeInfo = []byte("encrypt-cli-hpke-v1")
+
 type HPKEEncryptor struct{}
 
 func (h *HPKEEncryptor) ID() core.AlgorithmID { return core.AlgoHPKE }
 
 func (h *HPKEEncryptor) Encrypt(plaintext []byte, key []byte) (*core.EncryptionResult, error) {
-	suite := hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
-	info := []byte("encrypt-cli-hpke-v1")
-
-	kemID, _, _ := suite.Params()
+	kemID, _, _ := hpkeSuite.Params()
 	scheme := kemID.Scheme()
 	pk, err := scheme.UnmarshalBinaryPublicKey(key)
 	if err != nil {
 		return nil, errors.New("hpke: invalid public key: " + err.Error())
 	}
 
-	sender, err := suite.NewSender(pk, info)
+	sender, err := hpkeSuite.NewSender(pk, hpkeInfo)
 	if err != nil {
 		return nil, errors.New("hpke: new sender failed: " + err.Error())
 	}
@@ -47,17 +47,14 @@ func (h *HPKEEncryptor) Encrypt(plaintext []byte, key []byte) (*core.EncryptionR
 }
 
 func (h *HPKEEncryptor) Decrypt(data []byte, key []byte, nonce []byte) ([]byte, error) {
-	suite := hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
-	info := []byte("encrypt-cli-hpke-v1")
-
-	kemID, _, _ := suite.Params()
+	kemID, _, _ := hpkeSuite.Params()
 	scheme := kemID.Scheme()
 	sk, err := scheme.UnmarshalBinaryPrivateKey(key)
 	if err != nil {
 		return nil, errors.New("hpke: invalid private key: " + err.Error())
 	}
 
-	receiver, err := suite.NewReceiver(sk, info)
+	receiver, err := hpkeSuite.NewReceiver(sk, hpkeInfo)
 	if err != nil {
 		return nil, errors.New("hpke: new receiver failed: " + err.Error())
 	}
