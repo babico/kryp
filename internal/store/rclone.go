@@ -1,10 +1,14 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 )
+
+const defaultRcloneTimeout = 30 * time.Minute
 
 type RcloneUploader struct {
 	Binary      string
@@ -38,12 +42,15 @@ func (r *RcloneUploader) Upload(localPath string) error {
 }
 
 func (r *RcloneUploader) sync(localPath string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultRcloneTimeout)
+	defer cancel()
+
 	args := []string{"sync", localPath, r.RemotePath}
 	if r.ExtraArgs != "" {
 		args = append(args, splitArgs(r.ExtraArgs)...)
 	}
 
-	cmd := exec.Command(r.Binary, args...)
+	cmd := exec.CommandContext(ctx, r.Binary, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -52,12 +59,15 @@ func (r *RcloneUploader) sync(localPath string) error {
 }
 
 func (r *RcloneUploader) copy(localPath string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultRcloneTimeout)
+	defer cancel()
+
 	args := []string{"copy", localPath, r.RemotePath}
 	if r.ExtraArgs != "" {
 		args = append(args, splitArgs(r.ExtraArgs)...)
 	}
 
-	cmd := exec.Command(r.Binary, args...)
+	cmd := exec.CommandContext(ctx, r.Binary, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -66,15 +76,21 @@ func (r *RcloneUploader) copy(localPath string) error {
 }
 
 func (r *RcloneUploader) ListRemote() error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultRcloneTimeout)
+	defer cancel()
+
 	args := []string{"ls", r.RemotePath}
-	cmd := exec.Command(r.Binary, args...)
+	cmd := exec.CommandContext(ctx, r.Binary, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func (r *RcloneUploader) Check() error {
-	cmd := exec.Command(r.Binary, "version")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, r.Binary, "version")
 	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("rclone not available: %w", err)
