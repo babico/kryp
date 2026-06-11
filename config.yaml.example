@@ -1,0 +1,27 @@
+# encrypt-cli Configuration
+# Copy this file to config.yaml and adjust values.
+
+encryption:
+  algorithm: xchacha20-poly1305
+  key_file: ""
+  kdf_method: argon2id
+  passphrase: ""
+  uuid_rename: false
+  embed_metadata: false
+
+storage:
+  type: local
+  rclone:
+    remote_path: ""
+    binary: rclone
+    incremental: true
+    args: -v --progress
+
+database:
+  encrypt: true
+  format: json
+
+directories:
+  source: test/original
+  output: test/encrypted
+  decrypted: test/decrypted

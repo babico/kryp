@@ -1,0 +1,13 @@
+Project Review Meeting - Q2 2026
+
+Attendees: Alice, Bob, Charlie
+
+Agenda:
+1. Review Q1 performance
+2. Discuss Q2 roadmap
+3. Resource allocation
+
+Key Decisions:
+- Launch new feature by August
+- Hire 2 additional engineers
+- Increase cloud storage budget

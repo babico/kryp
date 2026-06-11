@@ -1,0 +1,6 @@
+bin/
+*.exe
+*.enc
+.idea/
+.vscode/
+*.test

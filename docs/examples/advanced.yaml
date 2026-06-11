@@ -1,0 +1,29 @@
+# Advanced configuration — AES-256-GCM with scrypt KDF and UUID rename
+encryption:
+  algorithm: aes-256-gcm
+  key_file: /etc/encrypt-keys/master.key
+  kdf_method: scrypt
+  passphrase: ""
+  uuid_rename: true
+  embed_metadata: true
+
+storage:
+  type: rclone
+  rclone:
+    remote_path: "gdrive:encrypted-backups"
+    binary: rclone
+    incremental: true
+    args: --verbose --progress --transfers=4 --checkers=8
+
+database:
+  encrypt: true
+  format: json
+
+directories:
+  source: /data/incoming
+  output: /data/outgoing/encrypted
+  decrypted: /data/outgoing/decrypted
+
+# The manifest.json.enc stores the UUID-to-filename mapping in encrypted form.
+# Decrypt with:
+#   encrypt-cli decrypt --key-file /etc/encrypt-keys/master.key --keep-path

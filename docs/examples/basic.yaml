@@ -1,0 +1,25 @@
+# Basic configuration — encrypt with XChaCha20-Poly1305, Argon2id, local storage
+encryption:
+  algorithm: xchacha20-poly1305
+  key_file: ""
+  kdf_method: argon2id
+  passphrase: "change-me-to-a-strong-passphrase"
+  uuid_rename: false
+  embed_metadata: false
+
+storage:
+  type: local
+  rclone:
+    remote_path: ""
+    binary: rclone
+    incremental: true
+    args: -v --progress
+
+database:
+  encrypt: true
+  format: json
+
+directories:
+  source: ./data/plain
+  output: ./data/encrypted
+  decrypted: ./data/decrypted

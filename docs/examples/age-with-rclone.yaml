@@ -1,0 +1,29 @@
+# Age asymmetric encryption + rclone cloud backup
+encryption:
+  algorithm: age
+  key_file: ""
+  kdf_method: argon2id
+  passphrase: ""
+  uuid_rename: true
+  embed_metadata: true
+
+storage:
+  type: rclone
+  rclone:
+    remote_path: "mydropbox:backups/encrypted-files"
+    binary: /usr/local/bin/rclone
+    incremental: true
+    args: -v --progress --checksum
+
+database:
+  encrypt: true
+  format: json
+
+directories:
+  source: ./documents
+  output: ./documents-encrypted
+  decrypted: ./documents-decrypted
+
+# Usage:
+#   encrypt: encrypt-cli encrypt --age-recipient "age1..."
+#   decrypt: encrypt-cli decrypt --key-file ./age-identity.txt
