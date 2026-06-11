@@ -73,7 +73,7 @@ var algorithmAliases = map[string]AlgorithmID{
 func ParseAlgorithm(s string) (AlgorithmID, error) {
 	algo, ok := algorithmAliases[strings.ToLower(s)]
 	if !ok {
-		return 0, fmt.Errorf("unknown algorithm: %s (use: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age)", s)
+		return 0, fmt.Errorf("unknown algorithm: %s (use: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age, ml-kem-768, ml-kem-1024, x-wing, hpke, ascon)", s)
 	}
 	return algo, nil
 }
