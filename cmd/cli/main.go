@@ -130,10 +130,10 @@ func genkeyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "genkey [algorithm] [output-file]",
 		Short: "Generate a random key for a given algorithm",
-		Long: `Generate a random key file for a given algorithm.
+		Long: `Generate a random key file or keypair for a given algorithm.
 
-Algorithms: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age
-For age, generates both identity and .recipient files.
+Algorithms: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age, ml-kem-768, ml-kem-1024, x-wing, hpke, ascon
+For age and PQC algorithms (ml-kem-768, ml-kem-1024, x-wing, hpke), generates a keypair.
 
 Examples:
   encrypt-cli genkey aes-256-gcm keys/aes.key
@@ -144,51 +144,42 @@ Examples:
 			algoName := args[0]
 			outPath := args[1]
 
-			algoNorm := strings.ToLower(algoName)
-
-			if algoNorm == "age" {
-				return generateAgeKey(outPath)
+			algoID, err := crypto.ParseAlgorithm(algoName)
+			if err != nil {
+				return err
 			}
 
-			if algoNorm == "ml-kem-768" || algoNorm == "mlkem768" || algoNorm == "kyber" || algoNorm == "post-quantum" || algoNorm == "7" {
+			switch algoID {
+			case crypto.AlgoAge:
+				return generateAgeKey(outPath)
+			case crypto.AlgoMLKEM768:
 				kp, err := crypto.GenerateMLKEMKeypair()
 				if err != nil {
 					return err
 				}
 				printKEMKeypairOutput(outPath, kp, "ml-kem-768")
 				return nil
-			}
-
-			if algoNorm == "ml-kem-1024" || algoNorm == "mlkem1024" || algoNorm == "kyber1024" || algoNorm == "8" {
+			case crypto.AlgoMLKEM1024:
 				kp, err := crypto.GenerateMLKEM1024Keypair()
 				if err != nil {
 					return err
 				}
 				printKEMKeypairOutput(outPath, kp, "ml-kem-1024")
 				return nil
-			}
-
-			if algoNorm == "x-wing" || algoNorm == "xwing" || algoNorm == "hybrid" || algoNorm == "hybrid-xwing" || algoNorm == "9" {
+			case crypto.AlgoHybridXWing:
 				kp, err := crypto.GenerateXWingKeypair()
 				if err != nil {
 					return err
 				}
 				printKEMKeypairOutput(outPath, kp, "x-wing")
 				return nil
-			}
-
-			if algoNorm == "hpke" || algoNorm == "hpke-x25519" || algoNorm == "circl-hpke" || algoNorm == "10" {
+			case crypto.AlgoHPKE:
 				kp, err := crypto.GenerateHPKEKeypair()
 				if err != nil {
 					return err
 				}
 				printKEMKeypairOutput(outPath, kp, "hpke")
 				return nil
-			}
-
-			algoID, err := crypto.ParseAlgorithm(algoName)
-			if err != nil {
-				return err
 			}
 
 			e, err := crypto.GetEncryptor(algoID)
