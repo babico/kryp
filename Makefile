@@ -1,5 +1,5 @@
-APP_NAME := encrypt-cli
-GUI_NAME := encrypt-gui
+APP_NAME := kryp
+GUI_NAME := kryp-gui
 NULL := $(if $(findstring Windows,$(OS)),nul,/dev/null)
 VERSION := $(shell git describe --tags --always 2>$(NULL) || echo dev)
 LDFLAGS := -ldflags="-X main.version=$(VERSION)"
@@ -7,6 +7,9 @@ LDFLAGS := -ldflags="-X main.version=$(VERSION)"
 GUI_LDFLAGS := -ldflags="-X main.version=$(VERSION) -H=windowsgui"
 GO := go
 GOFLAGS := -trimpath
+HOST_OS := $(shell $(GO) env GOOS)
+HOST_ARCH := $(shell $(GO) env GOARCH)
+EXE := $(if $(filter windows,$(HOST_OS)),.exe,)
 
 .PHONY: all build build-cli build-cli-all build-all
 .PHONY: build-cli-linux build-cli-windows build-cli-darwin build-cli-darwin-arm64
@@ -22,10 +25,10 @@ all: build test
 build: build-cli
 
 build-cli:
-	$(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)$(SUFFIX) ./cmd/cli/
+	$(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-$(HOST_OS)-$(HOST_ARCH)$(EXE) ./cmd/cli/
 
 build-gui:
-	$(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)$(SUFFIX) ./cmd/gui/
+	$(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-$(HOST_OS)-$(HOST_ARCH)$(EXE) ./cmd/gui/
 
 build-cli-all: build-cli-linux build-cli-windows build-cli-darwin build-cli-darwin-arm64
 
@@ -129,7 +132,6 @@ deps:
 clean:
 	$(GO) clean ./...
 	rm -rf bin/ 2>/dev/null || (if exist bin\ rmdir /s /q bin)
-	rm -f $(APP_NAME).exe $(APP_NAME) 2>/dev/null || (if exist $(APP_NAME).exe del /q $(APP_NAME).exe)
 	rm -f coverage.out coverage.html 2>/dev/null || (if exist coverage.out del /q coverage.out) & (if exist coverage.html del /q coverage.html)
 	rm -f test/encrypted/*.enc test/decrypted/* 2>/dev/null || (if exist test\encrypted\*.enc del /q test\encrypted\*.enc) & (if exist test\decrypted\* del /q test\decrypted\*)
 
