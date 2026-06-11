@@ -477,7 +477,11 @@ func (g *guiApp) runEncrypt() {
 
 	// Save manifest
 	manifestPath := filepath.Join(output, "manifest.json")
-	if algoID != crypto.AlgoAge {
+	encryptManifest := algoID != crypto.AlgoAge
+	if cfg, err := config.Load("config.yaml"); err == nil {
+		encryptManifest = cfg.Database.Encrypt && algoID != crypto.AlgoAge
+	}
+	if encryptManifest {
 		manifestPath = filepath.Join(output, "manifest.json.enc")
 		manifestData, err := manifest.Serialize()
 		if err != nil {
