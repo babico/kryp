@@ -167,6 +167,58 @@ func EncryptFileAge(filePath string, opts *EncryptFileOptions) ([]byte, error) {
 	return encryptAgeBytes(plaintext, &effectiveOpts)
 }
 
+func resolveDecryptKeyForAlgo(algo AlgorithmID, opts *DecryptFileOptions, header *Header, expectedKeyLen int) ([]byte, error) {
+	switch algo {
+	case AlgoAge:
+		if opts.KeyFile == "" {
+			return nil, errors.New("age decryption requires an identity key file")
+		}
+		ageData, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.TrimSpace(ageData), nil
+	case AlgoMLKEM768, AlgoMLKEM1024:
+		if opts.KeyFile == "" {
+			return nil, fmt.Errorf("%s decryption requires a decapsulation key file", algo)
+		}
+		privKey, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		if len(privKey) != 64 {
+			return nil, fmt.Errorf("%s decapsulation key must be 64 bytes, got %d", algo, len(privKey))
+		}
+		return privKey, nil
+	case AlgoHybridXWing:
+		if opts.KeyFile == "" {
+			return nil, errors.New("X-Wing decryption requires a decapsulation key file")
+		}
+		privKey, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		if len(privKey) != 32 {
+			return nil, fmt.Errorf("X-Wing decapsulation key must be 32 bytes, got %d", len(privKey))
+		}
+		return privKey, nil
+	case AlgoHPKE:
+		if opts.KeyFile == "" {
+			return nil, errors.New("HPKE decryption requires a private key file")
+		}
+		privKey, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		if len(privKey) != 32 {
+			return nil, fmt.Errorf("HPKE private key must be 32 bytes, got %d", len(privKey))
+		}
+		return privKey, nil
+	default:
+		return resolveDecryptKey(opts.Passphrase, opts.KeyFile, header.KDFMethod, header.KDFSalt, header.KDFParams, expectedKeyLen)
+	}
+}
+
 func DecryptFile(filePath string, opts *DecryptFileOptions) ([]byte, *Header, error) {
 	header, ciphertext, err := readFullHeader(filePath)
 	if err != nil {
@@ -177,98 +229,10 @@ func DecryptFile(filePath string, opts *DecryptFileOptions) ([]byte, *Header, er
 	if err != nil {
 		return nil, nil, err
 	}
-	expectedKeyLen := encryptor.KeySize()
 
-	var key []byte
-	switch header.Algorithm {
-	case AlgoAge:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("age decryption requires an identity key file")
-		}
-		ageData, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		key = bytes.TrimSpace(ageData)
-	case AlgoMLKEM768, AlgoMLKEM1024:
-		if opts.KeyFile == "" {
-			return nil, nil, fmt.Errorf("%s decryption requires a decapsulation key file", header.Algorithm)
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 64 {
-			return nil, nil, fmt.Errorf("%s decapsulation key must be 64 bytes, got %d", header.Algorithm, len(privKey))
-		}
-		key = privKey
-	case AlgoHybridXWing:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("X-Wing decryption requires a decapsulation key file")
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 32 {
-			return nil, nil, fmt.Errorf("X-Wing decapsulation key must be 32 bytes, got %d", len(privKey))
-		}
-		key = privKey
-	case AlgoHPKE:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("HPKE decryption requires a private key file")
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 32 {
-			return nil, nil, fmt.Errorf("HPKE private key must be 32 bytes, got %d", len(privKey))
-		}
-		key = privKey
-	default:
-		key, err = resolveDecryptKey(opts.Passphrase, opts.KeyFile, header.KDFMethod, header.KDFSalt, header.KDFParams, expectedKeyLen)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	switch header.Algorithm {
-	case AlgoAge:
-		enc := &asymmetric.AgeEncryptor{}
-		plaintext, err := enc.Decrypt(ciphertext, key, nil)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoMLKEM768:
-		enc := &pqc.MLKEM768{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoMLKEM1024:
-		enc := &pqc.MLKEM1024{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoHybridXWing:
-		enc := &pqc.HybridXWing{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoHPKE:
-		enc := &asymmetric.HPKEEncryptor{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
+	key, err := resolveDecryptKeyForAlgo(header.Algorithm, opts, header, encryptor.KeySize())
+	if err != nil {
+		return nil, nil, err
 	}
 
 	plaintext, err := encryptor.Decrypt(ciphertext, key, header.Nonce)
@@ -434,98 +398,10 @@ func DecryptFileBytes(data []byte, opts *DecryptFileOptions) ([]byte, *Header, e
 	if err != nil {
 		return nil, nil, err
 	}
-	expectedKeyLen := encryptor.KeySize()
 
-	var key []byte
-	switch header.Algorithm {
-	case AlgoAge:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("age decryption requires identity key file")
-		}
-		ageData, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		key = bytes.TrimSpace(ageData)
-	case AlgoMLKEM768, AlgoMLKEM1024:
-		if opts.KeyFile == "" {
-			return nil, nil, fmt.Errorf("%s decryption requires a decapsulation key file", header.Algorithm)
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 64 {
-			return nil, nil, fmt.Errorf("%s decapsulation key must be 64 bytes, got %d", header.Algorithm, len(privKey))
-		}
-		key = privKey
-	case AlgoHybridXWing:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("X-Wing decryption requires a decapsulation key file")
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 32 {
-			return nil, nil, fmt.Errorf("X-Wing decapsulation key must be 32 bytes, got %d", len(privKey))
-		}
-		key = privKey
-	case AlgoHPKE:
-		if opts.KeyFile == "" {
-			return nil, nil, errors.New("HPKE decryption requires a private key file")
-		}
-		privKey, err := os.ReadFile(opts.KeyFile)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(privKey) != 32 {
-			return nil, nil, fmt.Errorf("HPKE private key must be 32 bytes, got %d", len(privKey))
-		}
-		key = privKey
-	default:
-		key, err = resolveDecryptKey(opts.Passphrase, opts.KeyFile, header.KDFMethod, header.KDFSalt, header.KDFParams, expectedKeyLen)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	switch header.Algorithm {
-	case AlgoAge:
-		enc := &asymmetric.AgeEncryptor{}
-		plaintext, err := enc.Decrypt(ciphertext, key, nil)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoMLKEM768:
-		enc := &pqc.MLKEM768{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoMLKEM1024:
-		enc := &pqc.MLKEM1024{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoHybridXWing:
-		enc := &pqc.HybridXWing{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
-	case AlgoHPKE:
-		enc := &asymmetric.HPKEEncryptor{}
-		plaintext, err := enc.Decrypt(ciphertext, key, header.Nonce)
-		if err != nil {
-			return nil, nil, err
-		}
-		return plaintext, header, nil
+	key, err := resolveDecryptKeyForAlgo(header.Algorithm, opts, header, encryptor.KeySize())
+	if err != nil {
+		return nil, nil, err
 	}
 
 	plaintext, err := encryptor.Decrypt(ciphertext, key, header.Nonce)
