@@ -3,6 +3,8 @@ GUI_NAME := encrypt-gui
 NULL := $(if $(findstring Windows,$(OS)),nul,/dev/null)
 VERSION := $(shell git describe --tags --always 2>$(NULL) || echo dev)
 LDFLAGS := -ldflags="-X main.version=$(VERSION)"
+# Windows GUI builds need -H=windowsgui to suppress the terminal window
+GUI_LDFLAGS := -ldflags="-X main.version=$(VERSION) -H=windowsgui"
 GO := go
 GOFLAGS := -trimpath
 
@@ -23,7 +25,7 @@ build-cli:
 	$(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)$(SUFFIX) ./cmd/cli/
 
 build-gui:
-	$(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)$(SUFFIX) ./cmd/gui/
+	$(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)$(SUFFIX) ./cmd/gui/
 
 build-cli-all: build-cli-linux build-cli-windows build-cli-darwin build-cli-darwin-arm64
 
@@ -46,7 +48,7 @@ build-cli-darwin-arm64:
 build-gui-linux:
 	-GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-linux-amd64 ./cmd/gui/
 build-gui-windows:
-	-GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
+	-GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
 build-gui-darwin:
 	-GOOS=darwin GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-darwin-amd64 ./cmd/gui/
 
@@ -64,7 +66,7 @@ build-cli-darwin-arm64:
 build-gui-linux:
 	-set GOOS=linux&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-linux-amd64 ./cmd/gui/
 build-gui-windows:
-	set GOOS=windows&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
+	set GOOS=windows&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
 build-gui-darwin:
 	-set GOOS=darwin&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-darwin-amd64 ./cmd/gui/
 
