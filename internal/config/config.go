@@ -7,6 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	EnvPassphrase = "ENCRYPT_CLI_PASSPHRASE"
+	EnvKeyFile    = "ENCRYPT_CLI_KEY_FILE"
+)
+
 type Config struct {
 	Encryption EncryptionConfig `yaml:"encryption"`
 	Storage    StorageConfig    `yaml:"storage"`
@@ -95,4 +100,13 @@ func Save(path string, cfg *Config) error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func ApplyEnvOverrides(cfg *Config) {
+	if pass := os.Getenv(EnvPassphrase); pass != "" && cfg.Encryption.Passphrase == "" {
+		cfg.Encryption.Passphrase = pass
+	}
+	if key := os.Getenv(EnvKeyFile); key != "" && cfg.Encryption.KeyFile == "" {
+		cfg.Encryption.KeyFile = key
+	}
 }

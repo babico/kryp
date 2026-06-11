@@ -732,20 +732,28 @@ func generateAgeKey(outPath string) error {
 }
 
 func resolveConfig() *config.Config {
+	var cfg *config.Config
 	if cfgFile != "" {
-		cfg, err := config.Load(cfgFile)
+		c, err := config.Load(cfgFile)
 		if err == nil {
-			return cfg
-		}
-		fmt.Fprintf(os.Stderr, "Warning: could not load config %s: %v\n", cfgFile, err)
-	}
-	// Try default locations
-	for _, path := range []string{"config.yaml", "config.yml", filepath.Join("~", ".encrypt-cli.yaml")} {
-		expanded := os.ExpandEnv(path)
-		cfg, err := config.Load(expanded)
-		if err == nil {
-			return cfg
+			cfg = c
+		} else {
+			fmt.Fprintf(os.Stderr, "Warning: could not load config %s: %v\n", cfgFile, err)
 		}
 	}
-	return config.Default()
+	if cfg == nil {
+		for _, path := range []string{"config.yaml", "config.yml", filepath.Join("~", ".encrypt-cli.yaml")} {
+			expanded := os.ExpandEnv(path)
+			c, err := config.Load(expanded)
+			if err == nil {
+				cfg = c
+				break
+			}
+		}
+	}
+	if cfg == nil {
+		cfg = config.Default()
+	}
+	config.ApplyEnvOverrides(cfg)
+	return cfg
 }

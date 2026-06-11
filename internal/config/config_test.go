@@ -240,3 +240,40 @@ func TestConfigFilePermissions(t *testing.T) {
 		t.Logf("config file permissions: %o (group/other readable)", mode)
 	}
 }
+
+func TestApplyEnvOverridesPassphrase(t *testing.T) {
+	t.Setenv(EnvPassphrase, "env-pass-123")
+	cfg := Default()
+	ApplyEnvOverrides(cfg)
+	if cfg.Encryption.Passphrase != "env-pass-123" {
+		t.Errorf("Passphrase = %q, want %q", cfg.Encryption.Passphrase, "env-pass-123")
+	}
+}
+
+func TestApplyEnvOverridesDoesNotOverrideExisting(t *testing.T) {
+	t.Setenv(EnvPassphrase, "env-pass")
+	cfg := Default()
+	cfg.Encryption.Passphrase = "config-pass"
+	ApplyEnvOverrides(cfg)
+	if cfg.Encryption.Passphrase != "config-pass" {
+		t.Errorf("env should not override existing passphrase, got %q", cfg.Encryption.Passphrase)
+	}
+}
+
+func TestApplyEnvOverridesKeyFile(t *testing.T) {
+	t.Setenv(EnvKeyFile, "/env/key.bin")
+	cfg := Default()
+	ApplyEnvOverrides(cfg)
+	if cfg.Encryption.KeyFile != "/env/key.bin" {
+		t.Errorf("KeyFile = %q, want %q", cfg.Encryption.KeyFile, "/env/key.bin")
+	}
+}
+
+func TestApplyEnvOverridesEmptyEnv(t *testing.T) {
+	cfg := Default()
+	cfg.Encryption.Passphrase = "existing"
+	ApplyEnvOverrides(cfg)
+	if cfg.Encryption.Passphrase != "existing" {
+		t.Error("empty env should not modify config")
+	}
+}
