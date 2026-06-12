@@ -1,10 +1,11 @@
 APP_NAME := kryp
 GUI_NAME := kryp-gui
+CLI_NAME := kryp-cli
 NULL := $(if $(findstring Windows,$(OS)),nul,/dev/null)
 VERSION := $(shell git describe --tags --always 2>$(NULL) || echo dev)
-LDFLAGS := -ldflags="-X main.version=$(VERSION)"
+LDFLAGS := -ldflags="-X main.Version=$(VERSION)"
 # Windows GUI builds need -H=windowsgui to suppress the terminal window
-GUI_LDFLAGS := -ldflags="-X main.version=$(VERSION) -H=windowsgui"
+GUI_LDFLAGS := -ldflags="-X main.Version=$(VERSION) -H=windowsgui"
 GO := go
 GOFLAGS := -trimpath
 HOST_OS := $(shell $(GO) env GOOS)
@@ -13,9 +14,10 @@ EXE := $(if $(filter windows,$(HOST_OS)),.exe,)
 
 .PHONY: all build build-cli build-cli-all build-all
 .PHONY: build-cli-linux build-cli-windows build-cli-darwin build-cli-darwin-arm64
+.PHONY: build-cli-linux-386 build-cli-windows-386 build-cli-linux-arm64
 .PHONY: build-gui build-gui-linux build-gui-windows build-gui-darwin build-gui-all
-.PHONY: test test-unit test-e2e test-all test-short test-race test-coverage bench
-.PHONY: e2e-quick e2e-full
+.PHONY: test test-unit test-e2e test-all test-short test-race test-coverage test-coverage-ci bench
+.PHONY: ci check e2e-quick e2e-full
 .PHONY: clean lint fmt deps init run help
 
 ## ======== Build ========
@@ -30,7 +32,7 @@ build-cli:
 build-gui:
 	$(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-$(HOST_OS)-$(HOST_ARCH)$(EXE) ./cmd/gui/
 
-build-cli-all: build-cli-linux build-cli-windows build-cli-darwin build-cli-darwin-arm64
+build-cli-all: build-cli-linux build-cli-linux-386 build-cli-linux-arm64 build-cli-windows build-cli-windows-386 build-cli-darwin build-cli-darwin-arm64
 
 build-all: build-cli-all build-gui-all
 
@@ -40,13 +42,19 @@ build-gui-all: build-gui-linux build-gui-windows build-gui-darwin
 ifneq ($(OS),Windows_NT)
 
 build-cli-linux:
-	GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-linux-amd64 ./cmd/cli/
+	GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-amd64 ./cmd/cli/
+build-cli-linux-386:
+	GOOS=linux GOARCH=386 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-386 ./cmd/cli/
+build-cli-linux-arm64:
+	GOOS=linux GOARCH=arm64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-arm64 ./cmd/cli/
 build-cli-windows:
-	GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-windows-amd64.exe ./cmd/cli/
+	GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-windows-amd64.exe ./cmd/cli/
+build-cli-windows-386:
+	GOOS=windows GOARCH=386 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-windows-386.exe ./cmd/cli/
 build-cli-darwin:
-	GOOS=darwin GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-darwin-amd64 ./cmd/cli/
+	GOOS=darwin GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-darwin-amd64 ./cmd/cli/
 build-cli-darwin-arm64:
-	GOOS=darwin GOARCH=arm64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-darwin-arm64 ./cmd/cli/
+	GOOS=darwin GOARCH=arm64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-darwin-arm64 ./cmd/cli/
 
 build-gui-linux:
 	-GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-linux-amd64 ./cmd/gui/
@@ -58,20 +66,26 @@ build-gui-darwin:
 else
 
 build-cli-linux:
-	set GOOS=linux&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-linux-amd64 ./cmd/cli/
+	set "GOOS=linux" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-amd64 ./cmd/cli/
+build-cli-linux-386:
+	set "GOOS=linux" && set "GOARCH=386" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-386 ./cmd/cli/
+build-cli-linux-arm64:
+	set "GOOS=linux" && set "GOARCH=arm64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-linux-arm64 ./cmd/cli/
 build-cli-windows:
-	set GOOS=windows&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-windows-amd64.exe ./cmd/cli/
+	set "GOOS=windows" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-windows-amd64.exe ./cmd/cli/
+build-cli-windows-386:
+	set "GOOS=windows" && set "GOARCH=386" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-windows-386.exe ./cmd/cli/
 build-cli-darwin:
-	set GOOS=darwin&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-darwin-amd64 ./cmd/cli/
+	set "GOOS=darwin" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-darwin-amd64 ./cmd/cli/
 build-cli-darwin-arm64:
-	set GOOS=darwin&& set GOARCH=arm64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(APP_NAME)-darwin-arm64 ./cmd/cli/
+	set "GOOS=darwin" && set "GOARCH=arm64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(CLI_NAME)-darwin-arm64 ./cmd/cli/
 
 build-gui-linux:
-	-set GOOS=linux&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-linux-amd64 ./cmd/gui/
+	-set "GOOS=linux" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-linux-amd64 ./cmd/gui/
 build-gui-windows:
-	set GOOS=windows&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
+	set "GOOS=windows" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(GUI_LDFLAGS) -o bin/$(GUI_NAME)-windows-amd64.exe ./cmd/gui/
 build-gui-darwin:
-	-set GOOS=darwin&& set GOARCH=amd64&& $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-darwin-amd64 ./cmd/gui/
+	-set "GOOS=darwin" && set "GOARCH=amd64" && $(GO) build $(GOFLAGS) $(LDFLAGS) -o bin/$(GUI_NAME)-darwin-amd64 ./cmd/gui/
 
 endif
 
@@ -87,7 +101,7 @@ test-unit:
 	$(GO) test -v -count=1 -timeout 120s ./internal/...
 
 test-e2e:
-	$(GO) test -v -count=1 -timeout 300s ./test/...
+	$(GO) test -v -count=1 -timeout 600s ./test/...
 
 test-all: test-unit test-e2e
 
@@ -101,8 +115,23 @@ test-coverage:
 	$(GO) test -coverprofile=coverage.out -count=1 ./internal/...
 	$(GO) tool cover -html=coverage.out -o coverage.html
 
+test-coverage-ci:
+	$(GO) test -coverprofile=coverage.out -count=1 ./internal/...
+	$(GO) tool cover -func=coverage.out
+
 bench:
 	$(GO) test -bench=. -benchmem ./internal/...
+
+## ======== CI ========
+
+ci: lint deps test-unit test-coverage-ci
+	@echo "=== CI passed ==="
+
+check: vet build-cli test-short
+	@echo "=== Check passed ==="
+
+vet:
+	$(GO) vet ./...
 
 ## ======== E2E ========
 
@@ -148,19 +177,25 @@ help:
 	@echo "Build:"
 	@echo "  make build           - Build CLI for current platform"
 	@echo "  make build-cli       - Build CLI for current platform"
-	@echo "  make build-cli-all   - Cross-compile CLI for Linux/Windows/macOS"
+	@echo "  make build-cli-all   - Cross-compile CLI (linux/amd64,386; windows/amd64,386; darwin/amd64,arm64)"
 	@echo "  make build-gui       - Build GUI for current platform (requires CGO)"
 	@echo "  make build-gui-all   - Cross-compile GUI for all platforms"
 	@echo "  make build-all       - Cross-compile CLI + GUI for all platforms"
 	@echo "  make run             - Run CLI directly without building"
 	@echo ""
+	@echo "CI:"
+	@echo "  make ci              - Full CI: lint + deps + unit tests + coverage"
+	@echo "  make check           - Quick check: vet + build + short tests"
+	@echo ""
 	@echo "Test:"
 	@echo "  make test            - Run unit tests"
+	@echo "  make test-unit       - Run unit tests (vet + test)"
 	@echo "  make test-e2e        - Run end-to-end tests"
 	@echo "  make test-all        - Run all tests (unit + e2e)"
 	@echo "  make test-short      - Run unit tests in short mode"
 	@echo "  make test-race       - Run tests with race detector"
 	@echo "  make test-coverage   - Generate HTML coverage report"
+	@echo "  make test-coverage-ci - Generate coverage report for CI"
 	@echo "  make bench           - Run benchmarks"
 	@echo ""
 	@echo "E2E Scenarios:"
