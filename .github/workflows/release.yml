@@ -41,6 +41,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Build CLI
+        shell: bash
         run: |
           suffix=""
           if [ "${{ matrix.goos }}" = "windows" ]; then suffix=".exe"; fi
@@ -93,6 +94,7 @@ jobs:
         if: matrix.deps != ''
         run: ${{ matrix.deps }}
       - name: Build GUI
+        shell: bash
         run: |
           suffix=""
           ldflags="-X main.Version=${{ github.ref_name }}"
