@@ -14,7 +14,6 @@ const (
 
 type Config struct {
 	Encryption EncryptionConfig `yaml:"encryption"`
-	Storage    StorageConfig    `yaml:"storage"`
 	Database   DatabaseConfig   `yaml:"database"`
 	Directories DirectoryConfig `yaml:"directories"`
 }
@@ -26,18 +25,6 @@ type EncryptionConfig struct {
 	Passphrase    string `yaml:"passphrase"`
 	UUIDRename    bool   `yaml:"uuid_rename"`
 	EmbedMetadata bool   `yaml:"embed_metadata"`
-}
-
-type StorageConfig struct {
-	Type    string          `yaml:"type"`
-	Rclone  RcloneConfig    `yaml:"rclone"`
-}
-
-type RcloneConfig struct {
-	RemotePath  string `yaml:"remote_path"`
-	Binary      string `yaml:"binary"`
-	Incremental bool   `yaml:"incremental"`
-	Args        string `yaml:"args"`
 }
 
 type DatabaseConfig struct {
@@ -57,15 +44,6 @@ func Default() *Config {
 			Algorithm:   "xchacha20-poly1305",
 			KDFMethod:   "argon2id",
 			UUIDRename:  false,
-		},
-		Storage: StorageConfig{
-			Type: "local",
-			Rclone: RcloneConfig{
-				RemotePath:  "",
-				Binary:      "rclone",
-				Incremental: true,
-				Args:        "-v --progress",
-			},
 		},
 		Database: DatabaseConfig{
 			Encrypt: true,

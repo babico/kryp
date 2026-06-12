@@ -14,12 +14,6 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Encryption.KDFMethod != "argon2id" {
 		t.Errorf("default KDF = %q, want argon2id", cfg.Encryption.KDFMethod)
 	}
-	if cfg.Storage.Rclone.Incremental != true {
-		t.Error("default rclone should be incremental")
-	}
-	if cfg.Storage.Rclone.Binary != "rclone" {
-		t.Errorf("default rclone binary = %q, want rclone", cfg.Storage.Rclone.Binary)
-	}
 	if cfg.Database.Encrypt != true {
 		t.Error("default database encrypt should be true")
 	}
@@ -40,8 +34,6 @@ func TestSaveAndLoad(t *testing.T) {
 	cfg.Encryption.KDFMethod = "scrypt"
 	cfg.Encryption.UUIDRename = true
 	cfg.Encryption.EmbedMetadata = true
-	cfg.Storage.Rclone.RemotePath = "myremote:backups"
-	cfg.Storage.Rclone.Incremental = false
 	cfg.Database.Encrypt = false
 
 	err := Save(path, cfg)
@@ -65,12 +57,6 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.Encryption.EmbedMetadata != true {
 		t.Error("EmbedMetadata should be true")
-	}
-	if loaded.Storage.Rclone.RemotePath != "myremote:backups" {
-		t.Errorf("remote_path = %q", loaded.Storage.Rclone.RemotePath)
-	}
-	if loaded.Storage.Rclone.Incremental != false {
-		t.Error("Incremental should be false")
 	}
 	if loaded.Database.Encrypt != false {
 		t.Error("Encrypt should be false")
@@ -97,12 +83,7 @@ func TestLoadDefaultsOnPartialConfig(t *testing.T) {
 	if cfg.Encryption.KDFMethod != "argon2id" {
 		t.Errorf("KDF should default to argon2id, got %q", cfg.Encryption.KDFMethod)
 	}
-	if cfg.Storage.Rclone.Incremental != true {
-		t.Error("rclone incremental should default to true")
-	}
-	if cfg.Storage.Type != "local" {
-		t.Errorf("storage type should default to local, got %q", cfg.Storage.Type)
-	}
+
 }
 
 func TestLoadNonExistentFile(t *testing.T) {
@@ -140,15 +121,7 @@ func TestConfigRoundTripPreservesFields(t *testing.T) {
 			UUIDRename:    true,
 			EmbedMetadata: true,
 		},
-		Storage: StorageConfig{
-			Type: "rclone",
-			Rclone: RcloneConfig{
-				RemotePath:  "gdrive:backups",
-				Binary:      "/usr/bin/rclone",
-				Incremental: false,
-				Args:        "--verbose",
-			},
-		},
+
 		Database: DatabaseConfig{
 			Encrypt: false,
 			Format:  "json",
@@ -187,21 +160,6 @@ func TestConfigRoundTripPreservesFields(t *testing.T) {
 	}
 	if loaded.Encryption.EmbedMetadata != cfg.Encryption.EmbedMetadata {
 		t.Errorf("EmbedMetadata: got %v, want %v", loaded.Encryption.EmbedMetadata, cfg.Encryption.EmbedMetadata)
-	}
-	if loaded.Storage.Type != cfg.Storage.Type {
-		t.Errorf("Storage.Type: got %q, want %q", loaded.Storage.Type, cfg.Storage.Type)
-	}
-	if loaded.Storage.Rclone.RemotePath != cfg.Storage.Rclone.RemotePath {
-		t.Errorf("Rclone.RemotePath: got %q, want %q", loaded.Storage.Rclone.RemotePath, cfg.Storage.Rclone.RemotePath)
-	}
-	if loaded.Storage.Rclone.Binary != cfg.Storage.Rclone.Binary {
-		t.Errorf("Rclone.Binary: got %q, want %q", loaded.Storage.Rclone.Binary, cfg.Storage.Rclone.Binary)
-	}
-	if loaded.Storage.Rclone.Incremental != cfg.Storage.Rclone.Incremental {
-		t.Errorf("Rclone.Incremental: got %v, want %v", loaded.Storage.Rclone.Incremental, cfg.Storage.Rclone.Incremental)
-	}
-	if loaded.Storage.Rclone.Args != cfg.Storage.Rclone.Args {
-		t.Errorf("Rclone.Args: got %q, want %q", loaded.Storage.Rclone.Args, cfg.Storage.Rclone.Args)
 	}
 	if loaded.Database.Encrypt != cfg.Database.Encrypt {
 		t.Errorf("Database.Encrypt: got %v, want %v", loaded.Database.Encrypt, cfg.Database.Encrypt)

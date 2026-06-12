@@ -3,7 +3,7 @@ package asymmetric
 import (
 	"testing"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 func TestAgeEncryptorProperties(t *testing.T) {

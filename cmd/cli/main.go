@@ -2,46 +2,48 @@ package main
 
 import (
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"filippo.io/age"
 	"github.com/spf13/cobra"
 
-	"github.com/babico/data-encrypter-decrypter/internal/config"
-	"github.com/babico/data-encrypter-decrypter/internal/crypto"
-	"github.com/babico/data-encrypter-decrypter/internal/db"
-	"github.com/babico/data-encrypter-decrypter/internal/store"
+	"github.com/babico/kryp/internal/config"
+	"github.com/babico/kryp/internal/crypto"
+	"github.com/babico/kryp/internal/db"
 )
 
 var (
-	cfgFile       string
-	algorithm     string
-	passphrase    string
-	keyFile       string
-	kdfMethod     string
-	uuidRename    bool
-	embedMetadata bool
-	keepPath      bool
-	ageRecipient  string
-	sourceDir     string
-	outputDir     string
-	decryptDir    string
-	upload         bool
-	rcloneTarget  string
-	selectedFiles  []string
-	keyFormat     string
+	cfgFile        string
+	algorithm      string
+	passphrase     string
+	keyFile        string
+	kdfMethod      string
+	uuidRename     bool
+	embedMetadata  bool
+	keepPath       bool
+	ageRecipient   string
+	sourceDir      string
+	outputDir      string
+	decryptDir     string
+	selectedFiles   []string
+	keyFormat      string
+	hashAlgorithm  string
 )
+
+var Version = "dev"
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "encrypt-cli",
+		Use:   "kryp",
 		Short: "Encrypt/decrypt data for secure cloud storage",
-		Long:  `A powerful encryption tool for cloud storage with multiple algorithms, UUID renaming, and rclone integration.`,
+		Long:  `Kryp — A powerful encryption tool for cloud storage with multiple algorithms and UUID renaming.`,
 	}
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
@@ -52,6 +54,10 @@ func main() {
 	rootCmd.AddCommand(algorithmsCmd())
 	rootCmd.AddCommand(genkeyCmd())
 	rootCmd.AddCommand(initCmd())
+	rootCmd.AddCommand(versionCmd())
+	rootCmd.AddCommand(inspectCmd())
+	rootCmd.AddCommand(hashCmd())
+	rootCmd.AddCommand(infoCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -74,8 +80,6 @@ func encryptCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&uuidRename, "uuid-rename", "u", false, "Rename files to UUID and store mapping")
 	cmd.Flags().StringVarP(&sourceDir, "source", "s", "", "Source directory")
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "Output directory")
-	cmd.Flags().BoolVarP(&upload, "upload", "", false, "Upload to cloud after encryption")
-	cmd.Flags().StringVarP(&rcloneTarget, "rclone-target", "r", "", "Rclone remote:path target")
 	cmd.Flags().BoolVarP(&embedMetadata, "embed-metadata", "m", false, "Embed original filename/path in header")
 	cmd.Flags().StringVarP(&ageRecipient, "age-recipient", "", "", "Age recipient (public key) for age encryption")
 	cmd.Flags().StringVarP(&cfgFile, "config", "c", "", "Config file")
@@ -136,9 +140,9 @@ Algorithms: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-2
 For age and PQC algorithms (ml-kem-768, ml-kem-1024, x-wing, hpke), generates a keypair.
 
 Examples:
-  encrypt-cli genkey aes-256-gcm keys/aes.key
-  encrypt-cli genkey age keys/identity.txt
-  encrypt-cli genkey --format hex xchacha20-poly1305 keys/key.hex`,
+  kryp genkey aes-256-gcm keys/aes.key
+  kryp genkey age keys/identity.txt
+  kryp genkey --format hex xchacha20-poly1305 keys/key.hex`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			algoName := args[0]
@@ -254,9 +258,9 @@ func printKEMKeypairOutput(outPath string, kp *crypto.KEMKeypair, algoName strin
 	fmt.Printf("  Private key (seed): %s  (%d bytes)\n", outPath, len(kp.PrivateSeed))
 	fmt.Printf("  Public key:          %s  (%d bytes)\n", pubPath, len(kp.PublicKey))
 	fmt.Printf("\nEncrypt:\n")
-	fmt.Printf("  encrypt-cli encrypt --algorithm %s --key-file %s ...\n", algoName, pubPath)
+	fmt.Printf("  kryp encrypt --algorithm %s --key-file %s ...\n", algoName, pubPath)
 	fmt.Printf("Decrypt:\n")
-	fmt.Printf("  encrypt-cli decrypt --key-file %s ...\n", outPath)
+	fmt.Printf("  kryp decrypt --key-file %s ...\n", outPath)
 }
 
 func initCmd() *cobra.Command {
@@ -287,14 +291,14 @@ func initCmd() *cobra.Command {
 
 			readme := filepath.Join(basePath, "test", "original", "README.txt")
 			if _, err := os.Stat(readme); os.IsNotExist(err) {
-				content := "This is a test file.\nIt will be encrypted, then decrypted.\n\nYou can put any files in test/original/ and run:\n  encrypt-cli encrypt\n"
+				content := "This is a test file.\nIt will be encrypted, then decrypted.\n\nYou can put any files in test/original/ and run:\n  kryp encrypt\n"
 				if err := os.WriteFile(readme, []byte(content), 0644); err != nil {
 					return fmt.Errorf("writing test file: %w", err)
 				}
 				fmt.Printf("Test file created: %s\n", readme)
 			}
 
-			fmt.Println("\nProject initialized! Run 'encrypt-cli encrypt' to encrypt test/original/")
+			fmt.Println("\nProject initialized! Run 'kryp encrypt' to encrypt test/original/")
 			return nil
 		},
 	}
@@ -327,10 +331,6 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 	if v, _ := cmd.Flags().GetString("kdf"); v == "argon2id" && cfg.Encryption.KDFMethod != "" {
 		kdfMethod = cfg.Encryption.KDFMethod
 	}
-	if rcloneTarget == "" && cfg.Storage.Rclone.RemotePath != "" {
-		rcloneTarget = cfg.Storage.Rclone.RemotePath
-	}
-
 	algoID, err := crypto.ParseAlgorithm(algorithm)
 	if err != nil {
 		return err
@@ -441,21 +441,6 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("saving manifest: %w", err)
 		}
 		fmt.Printf("Manifest saved: %s\n", manifestPath)
-	}
-
-	if rcloneTarget != "" || upload {
-		target := rcloneTarget
-		if target == "" && cfg.Storage.Rclone.RemotePath != "" {
-			target = cfg.Storage.Rclone.RemotePath
-		}
-		if target != "" {
-			rcloneBin := cfg.Storage.Rclone.Binary
-			uploader := store.NewRcloneUploader(rcloneBin, target, cfg.Storage.Rclone.Incremental, cfg.Storage.Rclone.Args)
-			if err := uploader.Upload(outputDir); err != nil {
-				return fmt.Errorf("rclone upload failed: %w", err)
-			}
-			fmt.Printf("Uploaded to %s\n", target)
-		}
 	}
 
 	return nil
@@ -725,10 +710,113 @@ func generateAgeKey(outPath string) error {
 	fmt.Printf("Age recipient written to: %s\n", recipientPath)
 	fmt.Println()
 	fmt.Println("Encrypt:")
-	fmt.Printf("  encrypt-cli encrypt --algorithm age --age-recipient \"%s\" ...\n", identity.Recipient().String())
+	fmt.Printf("  kryp encrypt --algorithm age --age-recipient \"%s\" ...\n", identity.Recipient().String())
 	fmt.Println("Decrypt:")
-	fmt.Printf("  encrypt-cli decrypt --key-file %s ...\n", outPath)
+	fmt.Printf("  kryp decrypt --key-file %s ...\n", outPath)
 	return nil
+}
+
+func versionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Show version information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf("Kryp version %s\n", Version)
+			fmt.Printf("Module: %s\n", "github.com/babico/kryp")
+			return nil
+		},
+	}
+}
+
+func inspectCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "inspect <encrypted-file>",
+		Short: "Inspect encrypted file header",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			data, err := os.ReadFile(args[0])
+			if err != nil {
+				return fmt.Errorf("reading file: %w", err)
+			}
+			h, err := crypto.DecodeHeader(data)
+			if err != nil {
+				return fmt.Errorf("decoding header: %w", err)
+			}
+			fmt.Printf("File: %s\n", args[0])
+			fmt.Printf("  Version:     %d\n", h.Version)
+			fmt.Printf("  Algorithm:   %s (ID: %d)\n", h.Algorithm.String(), h.Algorithm)
+			fmt.Printf("  KDF Method:  %s\n", h.KDFMethod.String())
+			fmt.Printf("  Nonce size:  %d bytes\n", len(h.Nonce))
+			fmt.Printf("  Salt:        %x\n", h.KDFSalt)
+			if h.OriginalName != "" {
+				fmt.Printf("  Orig Name:   %s\n", h.OriginalName)
+			}
+			if h.OriginalPath != "" {
+				fmt.Printf("  Orig Path:   %s\n", h.OriginalPath)
+			}
+			fmt.Printf("  Body size:   %d bytes (encrypted)\n", len(data))
+			return nil
+		},
+	}
+}
+
+func hashCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "hash <file>",
+		Short: "Compute file hash (SHA256 by default)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			data, err := os.ReadFile(args[0])
+			if err != nil {
+				return fmt.Errorf("reading file: %w", err)
+			}
+			switch hashAlgorithm {
+			case "sha256":
+				h := sha256.Sum256(data)
+				fmt.Printf("SHA256 (%s) = %x\n", args[0], h[:])
+			case "sha512":
+				h := sha512.Sum512(data)
+				fmt.Printf("SHA512 (%s) = %x\n", args[0], h[:])
+			default:
+				return fmt.Errorf("unsupported hash: %s", hashAlgorithm)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&hashAlgorithm, "algorithm", "a", "sha256", "Hash algorithm (sha256, sha512)")
+	return cmd
+}
+
+func infoCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "info",
+		Short: "Show system and crypto information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("Kryp — System Information")
+			fmt.Println("=")
+			fmt.Printf("Version:   %s\n", Version)
+			fmt.Printf("Go:        %s\n", runtime.Version())
+			fmt.Println()
+			fmt.Println("Supported Algorithms:")
+			for _, id := range crypto.ListAlgorithms() {
+				e, err := crypto.GetEncryptor(id)
+				if err != nil {
+					continue
+				}
+				fmt.Printf("  %s (key: %d bytes, nonce: %d bytes)\n", id.String(), e.KeySize(), e.NonceSize())
+			}
+			fmt.Println()
+			fmt.Println("KDF Methods:")
+			for _, k := range []string{"argon2id", "scrypt", "pbkdf2", "none"} {
+				m, err := crypto.ParseKDF(k)
+				if err != nil {
+					continue
+				}
+				fmt.Printf("  %s\n", m.String())
+			}
+			return nil
+		},
+	}
 }
 
 func resolveConfig() *config.Config {
@@ -742,7 +830,7 @@ func resolveConfig() *config.Config {
 		}
 	}
 	if cfg == nil {
-		for _, path := range []string{"config.yaml", "config.yml", filepath.Join("~", ".encrypt-cli.yaml")} {
+		for _, path := range []string{"config.yaml", "config.yml", filepath.Join("~", ".kryp.yaml")} {
 			expanded := os.ExpandEnv(path)
 			c, err := config.Load(expanded)
 			if err == nil {

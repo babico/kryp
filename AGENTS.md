@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`encrypt-cli` is a Go CLI tool for encrypting/decrypting files with multiple algorithms, UUID rename, embedded metadata, and rclone integration. Module: `github.com/babico/data-encrypter-decrypter`.
+`kryp` is a Go CLI+GUI tool for encrypting/decrypting files with multiple algorithms, UUID rename, and embedded metadata. Module: `github.com/babico/kryp`.
 
 ## Key Files
 
@@ -16,11 +16,14 @@
 | `internal/crypto/mlkem768.go` | ML-KEM-768 (FIPS 203) post-quantum encryptor |
 | `internal/crypto/mlkem1024.go` | ML-KEM-1024 (FIPS 203) higher-security post-quantum encryptor |
 | `internal/crypto/xwing.go` | Hybrid X-Wing (X25519+ML-KEM-768) defense-in-depth encryptor |
-| `cmd/cli/main.go` | Cobra CLI with 6 commands, age/keypair key generation |
-| `cmd/gui/main.go` | Fyne v2 GUI |
+| `internal/crypto/hpke.go` | HPKE (RFC 9180) encryptor |
+| `internal/crypto/ascon.go` | ASCON-128 (NIST LW) encryptor |
+| `internal/crypto/symmetric/` | Symmetric ciphers (XChaCha20, ChaCha20, AES-GCM, SecretBox, AES-CTR+HMAC) |
+| `cmd/cli/main.go` | Cobra CLI with 10 commands: encrypt, decrypt, list, algorithms, genkey, init, version, inspect, hash, info |
+| `cmd/gui/main.go` | Fyne v2 GUI with async encrypt/decrypt, collapsible sections, key gen modal |
 | `internal/db/manifest.go` | UUID manifest database |
 | `internal/store/rclone.go` | Rclone uploader |
-| `internal/config/config.go` | YAML config struct |
+| `internal/config/config.go` | YAML config struct, `ApplyEnvOverrides` for `ENCRYPT_CLI_PASSPHRASE`/`ENCRYPT_CLI_KEY_FILE` |
 | `docs/examples/*.yaml` | Configuration examples (basic, age+rclone, advanced) |
 | `test/e2e_test.go` | End-to-end tests |
 
@@ -38,8 +41,8 @@
 ## Building
 
 ```bash
-make build-cli      # CLI binary only (bin/encrypt-cli)
-make build-gui      # GUI binary only (requires CGO/GCC)
+make build-cli      # CLI binary only (bin/kryp-windows-amd64.exe)
+make build-gui      # GUI binary only (requires CGO/GCC, uses -H=windowsgui)
 make build-all      # CLI cross-compile (linux/darwin/windows) + native GUI
 make build-cli-all  # CLI cross-compile for all platforms
 make build-gui-all  # GUI cross-compile for all platforms
@@ -52,7 +55,7 @@ make test        # go vet ./... + go test -v -count=1 -timeout 120s ./internal/.
 make test-e2e    # go test -count=1 -timeout 600s ./test/...
 ```
 
-125 unit tests (crypto: 93, config: 7, db: 11, store: 14), 29 E2E tests. All must pass.
+125+ unit tests (crypto: 93+, config: 7, db: 11, store: 14), 29 E2E tests. All must pass.
 
 ## Common Tasks
 
@@ -88,6 +91,11 @@ make test-e2e    # go test -count=1 -timeout 600s ./test/...
 - ML-KEM-768 uses asymmetric keys — `KeyFile` for encrypt = public key (1184 B), for decrypt = private seed (64 B)
 - ML-KEM-1024 uses asymmetric keys — `KeyFile` for encrypt = public key (1568 B), for decrypt = private seed (64 B)
 - X-Wing uses asymmetric keys — `KeyFile` for encrypt = public key (1216 B), for decrypt = private seed (32 B)
+- HPKE uses asymmetric keys — `KeyFile` for encrypt = public key, for decrypt = private seed
 - `DecryptFileOptions` uses `KeyFile` for age identity file path
 - The store package is untested — be careful with changes
 - GUI requires CGO — cannot build on systems without GCC/MinGW
+- GUI uses `fyne.Do()` for all UI updates — encryption/decryption runs in goroutines
+- GUI key gen dialog is `dialog.CustomDialog` sized 500x500 with key text output
+- GUI log entries are timestamped `[HH:MM:SS]`
+- Binary naming pattern: `kryp-{os}-{arch}.exe` (Windows) / `kryp-{os}-{arch}` (Unix)

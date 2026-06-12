@@ -8,12 +8,7 @@ encryption:
   embed_metadata: true
 
 storage:
-  type: rclone
-  rclone:
-    remote_path: "gdrive:encrypted-backups"
-    binary: rclone
-    incremental: true
-    args: --verbose --progress --transfers=4 --checkers=8
+  type: local
 
 database:
   encrypt: true
@@ -25,5 +20,3 @@ directories:
   decrypted: /data/outgoing/decrypted
 
 # The manifest.json.enc stores the UUID-to-filename mapping in encrypted form.
-# Decrypt with:
-#   encrypt-cli decrypt --key-file /etc/encrypt-keys/master.key --keep-path

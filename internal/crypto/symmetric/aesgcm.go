@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 type AES256GCM struct{}

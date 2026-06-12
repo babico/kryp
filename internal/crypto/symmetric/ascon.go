@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudflare/circl/cipher/ascon"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 type ASCON128 struct{}

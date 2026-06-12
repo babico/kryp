@@ -13,9 +13,9 @@ import (
 	"filippo.io/mlkem768/xwing"
 	"github.com/cloudflare/circl/hpke"
 
-	"github.com/babico/data-encrypter-decrypter/internal/crypto/asymmetric"
-	"github.com/babico/data-encrypter-decrypter/internal/crypto/pqc"
-	"github.com/babico/data-encrypter-decrypter/internal/crypto/symmetric"
+	"github.com/babico/kryp/internal/crypto/asymmetric"
+	"github.com/babico/kryp/internal/crypto/pqc"
+	"github.com/babico/kryp/internal/crypto/symmetric"
 )
 
 var encryptors = map[AlgorithmID]Encryptor{

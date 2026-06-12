@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 type MLKEM768 struct{}

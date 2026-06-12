@@ -9,11 +9,6 @@ encryption:
 
 storage:
   type: local
-  rclone:
-    remote_path: ""
-    binary: rclone
-    incremental: true
-    args: -v --progress
 
 database:
   encrypt: true

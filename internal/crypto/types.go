@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	"github.com/babico/kryp/internal/crypto/core"
 )
 
 type AlgorithmID = core.AlgorithmID

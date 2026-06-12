@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudflare/circl/hpke"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 var hpkeSuite = hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)

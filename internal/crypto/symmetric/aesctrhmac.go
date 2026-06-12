@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 type AES256CTRHMAC struct{}

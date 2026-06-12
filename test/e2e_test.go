@@ -15,7 +15,7 @@ var cliBinary string
 
 func TestMain(m *testing.M) {
 	// Build the CLI binary
-	cliBinary = filepath.Join(os.TempDir(), "encrypt-cli-test")
+	cliBinary = filepath.Join(os.TempDir(), "kryp-test")
 	if os.Getenv("GOOS") == "windows" || true {
 		cliBinary += ".exe"
 	}
@@ -1036,7 +1036,7 @@ func TestE2E_AgeKeyGenOutput(t *testing.T) {
 	if !strings.Contains(output, "Age recipient written") {
 		t.Error("output should mention recipient file")
 	}
-	if !strings.Contains(output, "encrypt-cli encrypt") {
+	if !strings.Contains(output, "kryp encrypt") {
 		t.Error("output should show encrypt example")
 	}
 

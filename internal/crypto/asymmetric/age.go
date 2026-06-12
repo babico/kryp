@@ -7,7 +7,7 @@ import (
 
 	"filippo.io/age"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 type AgeEncryptor struct{}

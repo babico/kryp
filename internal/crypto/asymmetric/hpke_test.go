@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudflare/circl/hpke"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 func hpkeTestKeypair(t *testing.T) (privSeed, pubKey []byte) {

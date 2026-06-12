@@ -5,7 +5,7 @@ import (
 	"crypto/mlkem"
 	"testing"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 func TestMLKEM1024EncryptDecrypt(t *testing.T) {

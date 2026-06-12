@@ -6,7 +6,7 @@ import (
 
 	"filippo.io/mlkem768/xwing"
 
-	core "github.com/babico/data-encrypter-decrypter/internal/crypto/core"
+	core "github.com/babico/kryp/internal/crypto/core"
 )
 
 func TestXWingEncryptDecrypt(t *testing.T) {

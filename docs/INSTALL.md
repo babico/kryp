@@ -23,7 +23,7 @@
 brew install go
 
 # Clone and build
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 
@@ -46,7 +46,7 @@ echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.zshrc
 source ~/.zshrc
 
 # Clone and build
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 sudo cp bin/encrypt-cli /usr/local/bin/
@@ -77,7 +77,7 @@ sudo apt install -y golang-go git make
 # source /etc/profile.d/go.sh
 
 # Build
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 sudo cp bin/encrypt-cli /usr/local/bin/
@@ -96,7 +96,7 @@ sudo dnf install -y go-toolset git make
 # echo 'export PATH=/usr/local/go/bin:$HOME/go/bin:$PATH' >> ~/.bashrc
 # source ~/.bashrc
 
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 sudo cp bin/encrypt-cli /usr/local/bin/
@@ -106,7 +106,7 @@ sudo cp bin/encrypt-cli /usr/local/bin/
 
 ```bash
 sudo pacman -S go git make
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 sudo cp bin/encrypt-cli /usr/local/bin/
@@ -134,7 +134,7 @@ winget install GoLang.Go
 # With MSYS2: pacman -S make
 
 # Clone and build
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 make build
 
@@ -146,7 +146,7 @@ make build
 ### Option 2: Go only (no Make)
 
 ```powershell
-git clone https://github.com/babico/data-encrypter-decrypter.git
+git clone https://github.com/babico/kryp.git
 cd data-encrypter-decrypter
 go build -trimpath -o bin\encrypt-cli.exe .\cmd\cli\
 

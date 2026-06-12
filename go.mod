@@ -1,10 +1,12 @@
-module github.com/babico/data-encrypter-decrypter
+module github.com/babico/kryp
 
 go 1.25.6
 
 require (
 	filippo.io/age v1.3.1
+	filippo.io/mlkem768 v0.0.0-20260214141301-2e7bebc7d88d
 	fyne.io/fyne/v2 v2.7.4
+	github.com/cloudflare/circl v1.6.3
 	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.53.0
@@ -13,10 +15,8 @@ require (
 
 require (
 	filippo.io/hpke v0.4.0 // indirect
-	filippo.io/mlkem768 v0.0.0-20260214141301-2e7bebc7d88d // indirect
 	fyne.io/systray v1.12.1 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
