@@ -197,16 +197,17 @@ Examples:
 				return err
 			}
 
-			if keyFormat == "raw" || keyFormat == "" {
+			switch keyFormat {
+			case "raw", "":
 				if err := os.WriteFile(outPath, key, 0600); err != nil {
 					return err
 				}
-			} else if keyFormat == "hex" {
+			case "hex":
 				outPath = ensureExtension(outPath, ".hex")
 				if err := os.WriteFile(outPath, []byte(hex.EncodeToString(key)+"\n"), 0600); err != nil {
 					return err
 				}
-			} else if keyFormat == "base64" {
+			case "base64":
 				outPath = ensureExtension(outPath, ".b64")
 				if err := os.WriteFile(outPath, []byte(base64.StdEncoding.EncodeToString(key)+"\n"), 0600); err != nil {
 					return err

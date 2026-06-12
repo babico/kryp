@@ -32,7 +32,8 @@ func printKEMKeypairOutput(outPath string, kp *crypto.KEMKeypair, algoName strin
 		return
 	}
 
-	if keyFormat == "hex" {
+	switch keyFormat {
+	case "hex":
 		hexPriv := outPath + ".priv.hex"
 		hexPub := pubPath + ".hex"
 		if err := os.WriteFile(hexPriv, []byte(fmt.Sprintf("%x", kp.PrivateSeed)+"\n"), 0600); err != nil {
@@ -41,7 +42,7 @@ func printKEMKeypairOutput(outPath string, kp *crypto.KEMKeypair, algoName strin
 		if err := os.WriteFile(hexPub, []byte(fmt.Sprintf("%x", kp.PublicKey)+"\n"), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing hex public key: %v\n", err)
 		}
-	} else if keyFormat == "base64" {
+	case "base64":
 		b64Priv := outPath + ".priv.b64"
 		b64Pub := pubPath + ".b64"
 		if err := os.WriteFile(b64Priv, []byte(base64.StdEncoding.EncodeToString(kp.PrivateSeed)+"\n"), 0600); err != nil {
@@ -238,7 +239,7 @@ func resolveConfig() *config.Config {
 	return cfg
 }
 
-func outputPathForFile(sourceFile, outputBase, defaultName string) string {
+func outputPathForFile(outputBase, defaultName string) string {
 	info, err := os.Stat(outputBase)
 	if err == nil && info.IsDir() {
 		return filepath.Join(outputBase, defaultName)
@@ -253,6 +254,6 @@ func outputPathForFile(sourceFile, outputBase, defaultName string) string {
 	return filepath.Join(outputBase, defaultName)
 }
 
-func decryptOutputPath(sourceFile, outputBase, defaultName string) string {
-	return outputPathForFile(sourceFile, outputBase, defaultName)
+func decryptOutputPath(outputBase, defaultName string) string {
+	return outputPathForFile(outputBase, defaultName)
 }

@@ -144,7 +144,7 @@ func runEncrypt(cmd *cobra.Command, args []string) error {
 			outName = relPath + ".enc"
 		}
 
-		outPath := outputPathForFile(path, outputDir, outName)
+		outPath := outputPathForFile(outputDir, outName)
 		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
 			return "", fmt.Errorf("creating output dir: %w", err)
 		}
@@ -270,7 +270,7 @@ func runDecrypt(cmd *cobra.Command, args []string) error {
 		if header.OriginalName != "" {
 			outName = header.OriginalName
 		}
-		outPath := decryptOutputPath(srcPath, decryptDir, outName)
+		outPath := decryptOutputPath(decryptDir, outName)
 
 		outDir := filepath.Dir(outPath)
 		if err := os.MkdirAll(outDir, 0755); err != nil {

@@ -44,33 +44,28 @@ func TestOutputPathForFile(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                    string
-		sourceFile, outputBase, defaultName, want string
+		name, outputBase, defaultName, want string
 	}{
 		{
 			name:        "existing directory",
-			sourceFile:  "/src/file.txt",
 			outputBase:  subDir,
 			defaultName: "out.enc",
 			want:        filepath.Join(subDir, "out.enc"),
 		},
 		{
 			name:        "existing file",
-			sourceFile:  "/src/file.txt",
 			outputBase:  existingFile,
 			defaultName: "out.enc",
 			want:        existingFile,
 		},
 		{
 			name:        "non-existent path with extension",
-			sourceFile:  "/src/file.txt",
 			outputBase:  filepath.Join(dir, "custom.out"),
 			defaultName: "out.enc",
 			want:        filepath.Join(dir, "custom.out"),
 		},
 		{
 			name:        "non-existent path without extension -> treated as directory",
-			sourceFile:  "/src/file.txt",
 			outputBase:  filepath.Join(dir, "newdir"),
 			defaultName: "out.enc",
 			want:        filepath.Join(dir, "newdir", "out.enc"),
@@ -78,10 +73,10 @@ func TestOutputPathForFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := outputPathForFile(tt.sourceFile, tt.outputBase, tt.defaultName)
+			got := outputPathForFile(tt.outputBase, tt.defaultName)
 			if got != tt.want {
-				t.Errorf("outputPathForFile(%q, %q, %q) = %q, want %q",
-					tt.sourceFile, tt.outputBase, tt.defaultName, got, tt.want)
+				t.Errorf("outputPathForFile(%q, %q) = %q, want %q",
+					tt.outputBase, tt.defaultName, got, tt.want)
 			}
 		})
 	}
@@ -95,7 +90,7 @@ func TestDecryptOutputPath(t *testing.T) {
 	}
 
 	want := filepath.Join(subDir, "file.dec")
-	got := decryptOutputPath("/src/file.enc", subDir, "file.dec")
+	got := decryptOutputPath(subDir, "file.dec")
 	if got != want {
 		t.Errorf("decryptOutputPath = %q, want %q", got, want)
 	}
