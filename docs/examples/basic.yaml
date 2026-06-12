@@ -1,4 +1,4 @@
-# Basic configuration — encrypt with XChaCha20-Poly1305, Argon2id, local storage
+# Basic configuration — encrypt with XChaCha20-Poly1305, Argon2id
 encryption:
   algorithm: xchacha20-poly1305
   key_file: ""
@@ -6,9 +6,6 @@ encryption:
   passphrase: "change-me-to-a-strong-passphrase"
   uuid_rename: false
   embed_metadata: false
-
-storage:
-  type: local
 
 database:
   encrypt: true

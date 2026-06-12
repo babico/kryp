@@ -93,21 +93,6 @@ func EncryptFile(filePath string, opts *EncryptFileOptions) ([]byte, error) {
 	return encryptFileBytes(plaintext, &effectiveOpts)
 }
 
-func EncryptFileAge(filePath string, opts *EncryptFileOptions) ([]byte, error) {
-	plaintext, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	effectiveOpts := *opts
-	effectiveOpts.Algorithm = AlgoAge
-	if opts.EmbedMetadata {
-		effectiveOpts.OriginalNameHint = filepath.Base(filePath)
-		effectiveOpts.OriginalPathHint = filePath
-	}
-	return encryptAgeBytes(plaintext, &effectiveOpts)
-}
-
 func DecryptFile(filePath string, opts *DecryptFileOptions) ([]byte, *Header, error) {
 	header, ciphertext, err := readFullHeader(filePath)
 	if err != nil {

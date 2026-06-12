@@ -267,13 +267,6 @@ Raw format per algorithm (after stripping header):
 | AES-256-SIV | 16B | ciphertext + 16B tag |
 | Deoxys-II-256-128 | 15B | ciphertext + 16B tag |
 
-### Pipe mode (stdin/stdout)
-
-```bash
-cat secret.txt | kryp encrypt --algorithm xchacha20-poly1305 --passphrase "pw" > secret.txt.enc
-cat secret.txt.enc | kryp decrypt --passphrase "pw" > secret.txt
-```
-
 ## Algorithm Aliases
 
 | Use | Aliases |

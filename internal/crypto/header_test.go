@@ -212,18 +212,4 @@ func TestHeaderMetadataUnicode(t *testing.T) {
 	}
 }
 
-func TestHeaderOverhead(t *testing.T) {
-	h := &Header{
-		Version:   1,
-		Algorithm: AlgoXChaCha20Poly1305,
-		KDFMethod: KDFArgon2id,
-		KDFSalt:   make([]byte, 16),
-		KDFParams: EncodeArgon2Params(3, 65536, 4),
-		Nonce:     make([]byte, 24),
-	}
-	overhead := HeaderOverhead(h)
-	encodedLen := len(h.Encode())
-	if overhead != encodedLen {
-		t.Errorf("HeaderOverhead = %d, Encode length = %d", overhead, encodedLen)
-	}
-}
+

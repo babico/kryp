@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 type guiApp struct {
 	window fyne.Window

@@ -31,16 +31,6 @@ func browseFolder(w fyne.Window, target *widget.Entry) {
 	d.Show()
 }
 
-func browseFile(w fyne.Window, target *widget.Entry) {
-	d := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		if err == nil && reader != nil {
-			target.SetText(reader.URI().Path())
-			reader.Close()
-		}
-	}, w)
-	d.Resize(fyne.NewSize(800, 600))
-	d.Show()
-}
 
 func buildRightColumn(algoSelect *widget.Select, ageEntry *widget.Entry, uuidCheck, embedCheck, compatCheck *widget.Check) (fyne.CanvasObject, *widget.Card) {
 	ageCard := makeSection("Age Recipient", ageEntry)

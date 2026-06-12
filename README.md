@@ -4,7 +4,7 @@ Encrypt/decrypt files for secure storage with multiple algorithms and UUID renam
 
 ## Features
 
-- **11 encryption algorithms**: XChaCha20-Poly1305, ChaCha20-Poly1305, AES-256-GCM, SecretBox, AES-256-CTR+HMAC, Age, ML-KEM-768, ML-KEM-1024, X-Wing, HPKE, ASCON-128
+- **19 encryption algorithms**: XChaCha20-Poly1305, ChaCha20-Poly1305, AES-256-GCM, SecretBox, AES-256-CTR+HMAC, AEGIS-128L, AEGIS-256, AES-256-GCM-SIV, AES-256-SIV, ASCON-128, Xoodyak, Deoxys-II, Age, ML-KEM-768, ML-KEM-1024, X-Wing, HPKE, HQC-128, FrodoKEM-640-SHAKE
 - **Key derivation**: Argon2id, scrypt, PBKDF2
 - **Post-quantum ready**: ML-KEM (FIPS 203), X-Wing hybrid, HPKE (RFC 9180)
 - **UUID rename**: Encrypt files as UUIDs with manifest tracking

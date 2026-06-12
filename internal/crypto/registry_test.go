@@ -923,59 +923,6 @@ func TestEncryptFileAgeWithEmbeddedMetadata(t *testing.T) {
 	}
 }
 
-func TestEncryptFileAge(t *testing.T) {
-	identity, err := age.GenerateX25519Identity()
-	if err != nil {
-		t.Fatalf("GenerateX25519Identity: %v", err)
-	}
-
-	dir := t.TempDir()
-	srcPath := filepath.Join(dir, "test.txt")
-	err = os.WriteFile(srcPath, []byte("encrypt file age test"), 0644)
-	if err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	opts := &EncryptFileOptions{
-		AgeRecipient:  identity.Recipient().String(),
-		EmbedMetadata: true,
-	}
-
-	encData, err := EncryptFileAge(srcPath, opts)
-	if err != nil {
-		t.Fatalf("EncryptFileAge: %v", err)
-	}
-
-	keyPath := filepath.Join(dir, "identity.txt")
-	err = os.WriteFile(keyPath, []byte(identity.String()), 0600)
-	if err != nil {
-		t.Fatalf("write identity: %v", err)
-	}
-
-	decrypted, header, err := DecryptFileBytes(encData, &DecryptFileOptions{KeyFile: keyPath})
-	if err != nil {
-		t.Fatalf("DecryptFileBytes: %v", err)
-	}
-
-	if header.Algorithm != AlgoAge {
-		t.Errorf("algorithm = %d, want %d", header.Algorithm, AlgoAge)
-	}
-	if string(decrypted) != "encrypt file age test" {
-		t.Errorf("content mismatch: got %q", string(decrypted))
-	}
-	if header.OriginalName != "test.txt" {
-		t.Errorf("OriginalName = %q, want %q", header.OriginalName, "test.txt")
-	}
-}
-
-func TestEncryptFileAgeFileNotFound(t *testing.T) {
-	_, err := EncryptFileAge("/nonexistent/file.txt", &EncryptFileOptions{
-		AgeRecipient: "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqsl3d9j",
-	})
-	if err == nil {
-		t.Fatal("expected error for missing file")
-	}
-}
 
 func TestHPKEEncryptDecrypt(t *testing.T) {
 	kp, err := GenerateHPKEKeypair()

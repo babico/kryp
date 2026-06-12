@@ -9,22 +9,32 @@
 | File | Purpose |
 | ---- | ------- |
 | `internal/crypto/header.go` | Binary header with magic bytes `ENCR`, metadata support |
-| `internal/crypto/registry.go` | Algorithm registry, `EncryptFile`, `DecryptFile`, `EncryptFileBytes`, `DecryptFileBytes` |
+| `internal/crypto/registry.go` | Public API: `EncryptFile`, `DecryptFile`, `EncryptFileBytes`, `DecryptFileBytes`, `GenerateKey` |
+| `internal/crypto/internal.go` | Internal helpers: `loadKey`, `resolveDecryptKeyForAlgo`, `deriveKeyFromOpts` |
+| `internal/crypto/keygen.go` | Key generation: `GenerateKEMKeypair`, `ExtractPublicKey`, `GenerateKeyPairFromSeed` |
 | `internal/crypto/types.go` | `AlgorithmID`, `KDFMethod` enums, `Encryptor` interface, `ParseAlgorithm`/`ParseKDF` |
 | `internal/crypto/keyderivation.go` | `DeriveKey` (Argon2id/scrypt/PBKDF2) |
-| `internal/crypto/age.go` | Age encryptor implementation |
-| `internal/crypto/mlkem768.go` | ML-KEM-768 (FIPS 203) post-quantum encryptor |
-| `internal/crypto/mlkem1024.go` | ML-KEM-1024 (FIPS 203) higher-security post-quantum encryptor |
-| `internal/crypto/xwing.go` | Hybrid X-Wing (X25519+ML-KEM-768) defense-in-depth encryptor |
-| `internal/crypto/hpke.go` | HPKE (RFC 9180) encryptor |
-| `internal/crypto/ascon.go` | ASCON-128 (NIST LW) encryptor |
-| `internal/crypto/symmetric/` | Symmetric ciphers (XChaCha20, ChaCha20, AES-GCM, SecretBox, AES-CTR+HMAC) |
-| `cmd/cli/main.go` | Cobra CLI with 10 commands: encrypt, decrypt, list, algorithms, genkey, init, version, inspect, hash, info |
-| `cmd/gui/main.go` | Fyne v2 GUI with async encrypt/decrypt, collapsible sections, key gen modal |
+| `internal/crypto/symmetric/` | Symmetric ciphers (XChaCha20, ChaCha20, AES-GCM, SecretBox, AES-CTR+HMAC, AEGIS-128L, AEGIS-256, AES-GCM-SIV, AES-SIV, ASCON-128, Xoodyak, Deoxys-II) |
+| `internal/crypto/asymmetric/` | Asymmetric ciphers (Age, HPKE) |
+| `internal/crypto/pqc/` | Post-quantum ciphers (ML-KEM-768, ML-KEM-1024, X-Wing, HQC-128, FrodoKEM-640-SHAKE) |
+| `internal/crypto/core/` | Core types: `AlgorithmID.String()`, `KDFMethod.String()`, `EncryptionResult` |
+| `cmd/cli/main.go` | Entry point, `Version`, global flag vars |
+| `cmd/cli/commands.go` | Cobra command constructors (10 commands) |
+| `cmd/cli/actions.go` | `runEncrypt`, `runDecrypt`, `runList` |
+| `cmd/cli/helpers.go` | Shared helpers: `ensureExtension`, `outputPathForFile`, `decryptOutputPath`, `readFilesFrom`, `detectMode`, etc. |
+| `cmd/gui/main.go` | Entry point, `guiApp` struct, `Version` |
+| `cmd/gui/actions.go` | `runEncrypt`, `runDecrypt`, `generateKEMKeypair` |
+| `cmd/gui/dialogs.go` | Key generation dialog modal |
+| `cmd/gui/ui.go` | Tab builders, `browseFolder`, `makeSection`, `buildRightColumn` |
+| `cmd/gui/widgets.go` | `atomicBool`, `logList`, log/running helpers |
 | `internal/db/manifest.go` | UUID manifest database |
 | `internal/config/config.go` | YAML config struct, `ApplyEnvOverrides` for `ENCRYPT_CLI_PASSPHRASE`/`ENCRYPT_CLI_KEY_FILE` |
 | `docs/examples/*.yaml` | Configuration examples (basic, advanced) |
-| `test/e2e_test.go` | End-to-end tests |
+| `test/e2e_test.go` | Main E2E test runner + 7 basic passphrase tests |
+| `test/e2e_key_test.go` | 4 key-based E2E tests |
+| `test/e2e_pqc_test.go` | 8 PQC + ASCON E2E tests |
+| `test/e2e_age_test.go` | 3 age E2E tests |
+| `test/e2e_advanced_test.go` | 13 advanced E2E tests |
 
 ## Architecture Notes
 
@@ -54,7 +64,7 @@ make test        # go vet ./... + go test -v -count=1 -timeout 120s ./internal/.
 make test-e2e    # go test -count=1 -timeout 600s ./test/...
 ```
 
-125+ unit tests (crypto: 93+, config: 7, db: 11, store: 14), 29 E2E tests. All must pass.
+190+ unit tests (crypto: 170+, config: 11, db: 11), 37 E2E tests. All must pass.
 
 ## Common Tasks
 
@@ -91,8 +101,9 @@ make test-e2e    # go test -count=1 -timeout 600s ./test/...
 - ML-KEM-1024 uses asymmetric keys — `KeyFile` for encrypt = public key (1568 B), for decrypt = private seed (64 B)
 - X-Wing uses asymmetric keys — `KeyFile` for encrypt = public key (1216 B), for decrypt = private seed (32 B)
 - HPKE uses asymmetric keys — `KeyFile` for encrypt = public key, for decrypt = private seed
+- HQC-128 uses asymmetric keys — `KeyFile` for encrypt = public key, for decrypt = private seed
+- FrodoKEM-640-SHAKE uses asymmetric keys — `KeyFile` for encrypt = public key (9616 B), for decrypt = private key (19888 B)
 - `DecryptFileOptions` uses `KeyFile` for age identity file path
-- The store package is untested — be careful with changes
 - GUI requires CGO — cannot build on systems without GCC/MinGW
 - GUI uses `fyne.Do()` for all UI updates — encryption/decryption runs in goroutines
 - GUI key gen dialog is `dialog.CustomDialog` sized 500x500 with key text output

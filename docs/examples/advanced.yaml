@@ -7,9 +7,6 @@ encryption:
   uuid_rename: true
   embed_metadata: true
 
-storage:
-  type: local
-
 database:
   encrypt: true
   format: json

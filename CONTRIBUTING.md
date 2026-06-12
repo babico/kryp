@@ -9,7 +9,7 @@
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.26+
 - `make` (GNU Make)
 - For GUI builds: GCC/MinGW-w64 (Windows), Xcode Command Line Tools (macOS), build-essential (Linux)
 
@@ -17,26 +17,28 @@
 
 ```
 cmd/
-  cli/          # CLI entry point (Cobra)
-  gui/          # Fyne GUI entry point
+  cli/          # CLI entry point (Cobra) — main.go, commands.go, actions.go, helpers.go
+  gui/          # Fyne GUI entry point — main.go, actions.go, dialogs.go, ui.go, widgets.go
 internal/
   config/       # YAML configuration loading/saving
-    config.go         # Config struct, Load/Save/Default
-    examples/         # Example config templates
   crypto/       # Encryption algorithms, KDF, header format
+    core/             # Core types: AlgorithmID, KDFMethod, EncryptionResult
+    symmetric/        # Symmetric ciphers (XChaCha20, ChaCha20, AES-GCM, etc.)
+    asymmetric/       # Asymmetric ciphers (Age, HPKE)
+    pqc/              # Post-quantum ciphers (ML-KEM, X-Wing, HQC, FrodoKEM)
+    registry.go       # Public API: EncryptFile, DecryptFile, etc.
+    internal.go       # Internal helpers: loadKey, deriveKeyFromOpts
+    keygen.go         # KEM keypair generation, ExtractPublicKey
+    keyderivation.go  # Argon2id, scrypt, PBKDF2
     types.go          # Algorithm/KDF enums, Encryptor interface, ParseAlgorithm/ParseKDF
     header.go         # Binary header encode/decode with magic bytes
-    registry.go       # Algorithm registry, encrypt/decrypt functions
-    keyderivation.go  # Argon2id, scrypt, PBKDF2
-    xchacha20.go      # XChaCha20-Poly1305
-    chacha20impl.go   # ChaCha20-Poly1305
-    aesgcm.go         # AES-256-GCM
-    secretbox.go      # NaCl SecretBox
-    aesctrhmac.go     # AES-256-CTR + HMAC-SHA256
-    age.go            # age (X25519 + ChaCha20-Poly1305)
   db/           # UUID manifest database
 test/
-  e2e_test.go   # End-to-end tests
+  e2e_test.go         # End-to-end tests (37 scenarios across 5 files)
+  e2e_key_test.go
+  e2e_pqc_test.go
+  e2e_age_test.go
+  e2e_advanced_test.go
 ```
 
 ## Code Style
@@ -56,7 +58,7 @@ make bench       # Benchmarks
 ```
 
 E2E tests cover:
-- All 6 algorithms with encrypt/decrypt round-trips
+- All 19 algorithms with encrypt/decrypt round-trips
 - All 3 KDF methods
 - Raw key encryption
 - UUID rename mode
@@ -71,7 +73,7 @@ E2E tests cover:
 2. Implement the `Encryptor` interface
 3. Add the algorithm to `encryptors` map in `registry.go`
 4. Add tests in `crypto_test.go`
-5. Add CLI parsing in `cmd/cli/main.go`
+5. Add CLI flag (global var in `main.go`, register in command's `Flags()` in `commands.go`, use in `actions.go`)
 
 ## Commit Messages
 

@@ -36,7 +36,7 @@ var (
 	pbkdf2Iter     uint32
 )
 
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 func main() {
 	rootCmd := &cobra.Command{

@@ -219,6 +219,4 @@ func DecodeHeader(data []byte) (*Header, error) {
 	return h, nil
 }
 
-func HeaderOverhead(header *Header) int {
-	return len(header.Encode())
-}
+
