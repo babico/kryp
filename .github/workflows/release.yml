@@ -28,6 +28,9 @@ jobs:
       matrix:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64, 386]
+        exclude:
+          - goos: darwin
+            goarch: 386
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,11 +64,6 @@ jobs:
             goos: linux
             goarch: amd64
             deps: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
-          - os: ubuntu-latest
-            goos: linux
-            goarch: arm64
-            deps: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev gcc-aarch64-linux-gnu
-            cc: aarch64-linux-gnu-gcc
           - os: macos-latest
             goos: darwin
             goarch: amd64
