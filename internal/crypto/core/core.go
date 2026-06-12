@@ -15,6 +15,14 @@ const (
 	AlgoHybridXWing       AlgorithmID = 9
 	AlgoHPKE              AlgorithmID = 10
 	AlgoASCON128          AlgorithmID = 11
+	AlgoAEGIS128L         AlgorithmID = 12
+	AlgoAEGIS256          AlgorithmID = 13
+	AlgoAES256GCMSIV      AlgorithmID = 14
+	AlgoHQC128            AlgorithmID = 15
+	AlgoXoodyak           AlgorithmID = 16
+	AlgoDeoxysII          AlgorithmID = 17
+	AlgoAES256SIV         AlgorithmID = 18
+	AlgoFrodo640SHAKE     AlgorithmID = 19
 )
 
 func (a AlgorithmID) String() string {
@@ -41,6 +49,22 @@ func (a AlgorithmID) String() string {
 		return "HPKE (X25519+HKDF-SHA256+ChaCha20-Poly1305)"
 	case AlgoASCON128:
 		return "ASCON-128 (NIST Lightweight)"
+	case AlgoAEGIS128L:
+		return "AEGIS-128L"
+	case AlgoAEGIS256:
+		return "AEGIS-256"
+	case AlgoAES256GCMSIV:
+		return "AES-256-GCM-SIV (RFC 8452)"
+	case AlgoHQC128:
+		return "HQC-128 (FIPS 207)"
+	case AlgoXoodyak:
+		return "Xoodyak (NIST LWC)"
+	case AlgoDeoxysII:
+		return "Deoxys-II-256-128 (CAESAR)"
+	case AlgoAES256SIV:
+		return "AES-256-SIV (RFC 5297)"
+	case AlgoFrodo640SHAKE:
+		return "FrodoKEM-640-SHAKE (NIST PQC)"
 	default:
 		return "unknown"
 	}

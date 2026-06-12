@@ -62,4 +62,4 @@ make build-all      # Cross-compile all platforms
 
 ## License
 
-MIT
+DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE (WTFPL)

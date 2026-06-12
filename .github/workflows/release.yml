@@ -1,0 +1,132 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - run: go vet ./...
+      - run: go test -count=1 -timeout 120s ./internal/...
+
+  build-cli:
+    needs: [test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64, 386]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - name: Build CLI
+        run: |
+          suffix=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then suffix=".exe"; fi
+          go build -trimpath \
+            -ldflags="-X main.version=${{ github.ref_name }}" \
+            -o bin/kryp-${{ matrix.goos }}-${{ matrix.goarch }}$suffix \
+            ./cmd/cli/
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kryp-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/*
+
+  build-gui:
+    needs: [test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            deps: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            deps: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev gcc-aarch64-linux-gnu
+            cc: aarch64-linux-gnu-gcc
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            deps: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            deps: ""
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            deps: choco install mingw
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            deps: choco install mingw arm64-gcc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+      - name: Install dependencies
+        if: matrix.deps != ''
+        run: ${{ matrix.deps }}
+      - name: Build GUI
+        run: |
+          suffix=""
+          ldflags="-X main.version=${{ github.ref_name }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            suffix=".exe"
+            ldflags="$ldflags -H=windowsgui"
+          fi
+          go build -trimpath \
+            -ldflags="$ldflags" \
+            -o bin/kryp-gui-${{ matrix.goos }}-${{ matrix.goarch }}$suffix \
+            ./cmd/gui/
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+          CC: ${{ matrix.cc || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kryp-gui-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bin/*
+
+  release:
+    needs: [build-cli, build-gui]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kryp-*
+          merge-multiple: true
+      - name: Generate checksums
+        run: sha256sum kryp-* > checksums.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            kryp-*
+            checksums.txt
+          generate_release_notes: true

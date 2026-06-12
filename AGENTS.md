@@ -22,9 +22,8 @@
 | `cmd/cli/main.go` | Cobra CLI with 10 commands: encrypt, decrypt, list, algorithms, genkey, init, version, inspect, hash, info |
 | `cmd/gui/main.go` | Fyne v2 GUI with async encrypt/decrypt, collapsible sections, key gen modal |
 | `internal/db/manifest.go` | UUID manifest database |
-| `internal/store/rclone.go` | Rclone uploader |
 | `internal/config/config.go` | YAML config struct, `ApplyEnvOverrides` for `ENCRYPT_CLI_PASSPHRASE`/`ENCRYPT_CLI_KEY_FILE` |
-| `docs/examples/*.yaml` | Configuration examples (basic, age+rclone, advanced) |
+| `docs/examples/*.yaml` | Configuration examples (basic, advanced) |
 | `test/e2e_test.go` | End-to-end tests |
 
 ## Architecture Notes

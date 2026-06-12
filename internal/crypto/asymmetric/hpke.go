@@ -10,7 +10,7 @@ import (
 )
 
 var hpkeSuite = hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
-var hpkeInfo = []byte("encrypt-cli-hpke-v1")
+var hpkeInfo = []byte("kryp-hpke-v1")
 
 type HPKEEncryptor struct{}
 

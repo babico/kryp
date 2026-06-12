@@ -22,6 +22,14 @@ const (
 	AlgoHybridXWing       = core.AlgoHybridXWing
 	AlgoHPKE              = core.AlgoHPKE
 	AlgoASCON128          = core.AlgoASCON128
+	AlgoAEGIS128L         = core.AlgoAEGIS128L
+	AlgoAEGIS256          = core.AlgoAEGIS256
+	AlgoAES256GCMSIV      = core.AlgoAES256GCMSIV
+	AlgoHQC128            = core.AlgoHQC128
+	AlgoXoodyak           = core.AlgoXoodyak
+	AlgoDeoxysII          = core.AlgoDeoxysII
+	AlgoAES256SIV         = core.AlgoAES256SIV
+	AlgoFrodo640SHAKE     = core.AlgoFrodo640SHAKE
 )
 
 var algorithmAliases = map[string]AlgorithmID{
@@ -68,12 +76,42 @@ var algorithmAliases = map[string]AlgorithmID{
 	"ascon128":           AlgoASCON128,
 	"ascon128a":          AlgoASCON128,
 	"11":                 AlgoASCON128,
+	"aegis-128l":         AlgoAEGIS128L,
+	"aegis128l":          AlgoAEGIS128L,
+	"12":                 AlgoAEGIS128L,
+	"aegis-256":          AlgoAEGIS256,
+	"aegis256":           AlgoAEGIS256,
+	"13":                 AlgoAEGIS256,
+	"aes-256-gcm-siv":    AlgoAES256GCMSIV,
+	"aes-gcm-siv":        AlgoAES256GCMSIV,
+	"gcm-siv":            AlgoAES256GCMSIV,
+	"14":                 AlgoAES256GCMSIV,
+	"hqc-128":            AlgoHQC128,
+	"hqc128":             AlgoHQC128,
+	"hqc":                AlgoHQC128,
+	"15":                 AlgoHQC128,
+	"xoodyak":            AlgoXoodyak,
+	"16":                 AlgoXoodyak,
+	"deoxys-ii":          AlgoDeoxysII,
+	"deoxysii":           AlgoDeoxysII,
+	"deoxys":             AlgoDeoxysII,
+	"17":                 AlgoDeoxysII,
+	"aes-256-siv":        AlgoAES256SIV,
+	"aes-siv":            AlgoAES256SIV,
+	"siv":                AlgoAES256SIV,
+	"18":                 AlgoAES256SIV,
+	"frodokem-640-shake": AlgoFrodo640SHAKE,
+	"frodokem640shake":   AlgoFrodo640SHAKE,
+	"frodokem640":        AlgoFrodo640SHAKE,
+	"frodo640":           AlgoFrodo640SHAKE,
+	"frodo":              AlgoFrodo640SHAKE,
+	"19":                 AlgoFrodo640SHAKE,
 }
 
 func ParseAlgorithm(s string) (AlgorithmID, error) {
 	algo, ok := algorithmAliases[strings.ToLower(s)]
 	if !ok {
-		return 0, fmt.Errorf("unknown algorithm: %s (use: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age, ml-kem-768, ml-kem-1024, x-wing, hpke, ascon)", s)
+		return 0, fmt.Errorf("unknown algorithm: %s (use: xchacha20-poly1305, chacha20-poly1305, aes-256-gcm, secretbox, aes-256-ctr-hmac, age, ml-kem-768, ml-kem-1024, x-wing, hpke, ascon, aegis-128l, aegis-256, aes-256-gcm-siv, hqc-128, xoodyak, deoxys-ii, aes-256-siv, frodokem-640-shake)", s)
 	}
 	return algo, nil
 }

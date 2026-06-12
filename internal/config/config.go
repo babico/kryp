@@ -25,6 +25,13 @@ type EncryptionConfig struct {
 	Passphrase    string `yaml:"passphrase"`
 	UUIDRename    bool   `yaml:"uuid_rename"`
 	EmbedMetadata bool   `yaml:"embed_metadata"`
+	Argon2Time    uint32 `yaml:"argon2_time,omitempty"`
+	Argon2Memory  uint32 `yaml:"argon2_memory,omitempty"`
+	Argon2Threads uint8  `yaml:"argon2_threads,omitempty"`
+	ScryptN       uint32 `yaml:"scrypt_n,omitempty"`
+	ScryptR       uint32 `yaml:"scrypt_r,omitempty"`
+	ScryptP       uint32 `yaml:"scrypt_p,omitempty"`
+	PBKDF2Iter    uint32 `yaml:"pbkdf2_iter,omitempty"`
 }
 
 type DatabaseConfig struct {

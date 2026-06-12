@@ -35,7 +35,6 @@ internal/
     aesctrhmac.go     # AES-256-CTR + HMAC-SHA256
     age.go            # age (X25519 + ChaCha20-Poly1305)
   db/           # UUID manifest database
-  store/        # Rclone uploader
 test/
   e2e_test.go   # End-to-end tests
 ```
