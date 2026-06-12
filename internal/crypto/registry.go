@@ -12,6 +12,8 @@ import (
 	"filippo.io/age"
 	"filippo.io/mlkem768/xwing"
 	"github.com/cloudflare/circl/hpke"
+	"github.com/kuking/go-frodokem"
+	"github.com/shurlinet/go-hqc"
 
 	"github.com/babico/kryp/internal/crypto/asymmetric"
 	"github.com/babico/kryp/internal/crypto/pqc"
@@ -30,6 +32,14 @@ var encryptors = map[AlgorithmID]Encryptor{
 	AlgoHybridXWing:       &pqc.HybridXWing{},
 	AlgoHPKE:              &asymmetric.HPKEEncryptor{},
 	AlgoASCON128:          &symmetric.ASCON128{},
+	AlgoAEGIS128L:         &symmetric.AEGIS128L{},
+	AlgoAEGIS256:          &symmetric.AEGIS256{},
+	AlgoAES256GCMSIV:      &symmetric.AES256GCMSIV{},
+	AlgoHQC128:            &pqc.HQC128{},
+	AlgoXoodyak:           &symmetric.Xoodyak{},
+	AlgoDeoxysII:          &symmetric.DeoxysII{},
+	AlgoAES256SIV:         &symmetric.AES256SIV{},
+	AlgoFrodo640SHAKE:     &pqc.Frodo640SHAKE{},
 }
 
 func GetEncryptor(id AlgorithmID) (Encryptor, error) {
@@ -55,9 +65,17 @@ type EncryptFileOptions struct {
 	KDFMethod       KDFMethod
 	UUIDRename      bool
 	EmbedMetadata   bool
+	Compatible      bool
 	AgeRecipient    string
 	OriginalNameHint string
 	OriginalPathHint string
+	Argon2Time      uint32
+	Argon2Memory    uint32
+	Argon2Threads   uint8
+	ScryptN         uint32
+	ScryptR         uint32
+	ScryptP         uint32
+	PBKDF2Iter      uint32
 }
 
 type DecryptFileOptions struct {
@@ -108,11 +126,39 @@ func deriveKeyFromOpts(opts *EncryptFileOptions, expectedKeyLen int) (key []byte
 		}
 		switch kdfMethod {
 		case KDFArgon2id:
-			kdfParams = EncodeArgon2Params(DefaultArgon2Time, DefaultArgon2Memory, DefaultArgon2Threads)
+			time := uint32(DefaultArgon2Time)
+			memory := uint32(DefaultArgon2Memory)
+			threads := byte(DefaultArgon2Threads)
+			if opts.Argon2Time != 0 {
+				time = opts.Argon2Time
+			}
+			if opts.Argon2Memory != 0 {
+				memory = opts.Argon2Memory
+			}
+			if opts.Argon2Threads != 0 {
+				threads = opts.Argon2Threads
+			}
+			kdfParams = EncodeArgon2Params(time, memory, threads)
 		case KDFScrypt:
-			kdfParams = EncodeScryptParams(DefaultScryptN, DefaultScryptR, DefaultScryptP)
+			N := uint32(DefaultScryptN)
+			r := uint32(DefaultScryptR)
+			p := uint32(DefaultScryptP)
+			if opts.ScryptN != 0 {
+				N = opts.ScryptN
+			}
+			if opts.ScryptR != 0 {
+				r = opts.ScryptR
+			}
+			if opts.ScryptP != 0 {
+				p = opts.ScryptP
+			}
+			kdfParams = EncodeScryptParams(N, r, p)
 		case KDFPBKDF2:
-			kdfParams = EncodePBKDF2Params(DefaultPBKDF2Iter)
+			iter := uint32(DefaultPBKDF2Iter)
+			if opts.PBKDF2Iter != 0 {
+				iter = opts.PBKDF2Iter
+			}
+			kdfParams = EncodePBKDF2Params(iter)
 		default:
 			err = fmt.Errorf("unsupported KDF: %d", kdfMethod)
 			return
@@ -127,9 +173,7 @@ func deriveKeyFromOpts(opts *EncryptFileOptions, expectedKeyLen int) (key []byte
 		return
 	}
 
-	kdfMethod = KDFNone
-	key = make([]byte, expectedKeyLen)
-	_, err = rand.Read(key)
+	err = fmt.Errorf("no passphrase or key file provided")
 	return
 }
 
@@ -214,6 +258,31 @@ func resolveDecryptKeyForAlgo(algo AlgorithmID, opts *DecryptFileOptions, header
 			return nil, fmt.Errorf("HPKE private key must be 32 bytes, got %d", len(privKey))
 		}
 		return privKey, nil
+	case AlgoHQC128:
+		if opts.KeyFile == "" {
+			return nil, errors.New("HQC-128 decryption requires a decapsulation key file")
+		}
+		privKey, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		if len(privKey) != hqc.SecretKeySize128 {
+			return nil, fmt.Errorf("HQC-128 decapsulation key must be %d bytes, got %d", hqc.SecretKeySize128, len(privKey))
+		}
+		return privKey, nil
+	case AlgoFrodo640SHAKE:
+		if opts.KeyFile == "" {
+			return nil, errors.New("FrodoKEM-640-SHAKE decryption requires a decapsulation key file")
+		}
+		privKey, err := os.ReadFile(opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		var fk = go_frodokem.Frodo640SHAKE()
+		if len(privKey) != fk.SecretKeyLen() {
+			return nil, fmt.Errorf("FrodoKEM-640-SHAKE decapsulation key must be %d bytes, got %d", fk.SecretKeyLen(), len(privKey))
+		}
+		return privKey, nil
 	default:
 		return resolveDecryptKey(opts.Passphrase, opts.KeyFile, header.KDFMethod, header.KDFSalt, header.KDFParams, expectedKeyLen)
 	}
@@ -280,11 +349,18 @@ func EncryptFileBytes(data []byte, opts *EncryptFileOptions) ([]byte, error) {
 }
 
 func encryptFileBytes(data []byte, opts *EncryptFileOptions) ([]byte, error) {
+	if opts.Compatible {
+		if opts.Algorithm == AlgoAge {
+			return encryptAgeBytes(data, opts)
+		}
+		return encryptCompatible(data, opts)
+	}
+
 	if opts.Algorithm == AlgoAge {
 		return encryptAgeBytes(data, opts)
 	}
 
-	if opts.Algorithm == AlgoMLKEM768 || opts.Algorithm == AlgoMLKEM1024 || opts.Algorithm == AlgoHybridXWing || opts.Algorithm == AlgoHPKE {
+	if opts.Algorithm == AlgoMLKEM768 || opts.Algorithm == AlgoMLKEM1024 || opts.Algorithm == AlgoHybridXWing || opts.Algorithm == AlgoHPKE || opts.Algorithm == AlgoHQC128 || opts.Algorithm == AlgoFrodo640SHAKE {
 		return encryptKEMBytes(data, opts)
 	}
 
@@ -305,6 +381,32 @@ func encryptFileBytes(data []byte, opts *EncryptFileOptions) ([]byte, error) {
 	}
 
 	return encryptWithKey(data, opts.Algorithm, key, kdfMethod, kdfSalt, kdfParams, encryptor, origName, origPath)
+}
+
+func encryptCompatible(data []byte, opts *EncryptFileOptions) ([]byte, error) {
+	if opts.EmbedMetadata {
+		return nil, errors.New("--compatible is incompatible with --embed-metadata")
+	}
+	if opts.UUIDRename {
+		return nil, errors.New("--compatible is incompatible with --uuid-rename")
+	}
+
+	enc, err := GetEncryptor(opts.Algorithm)
+	if err != nil {
+		return nil, err
+	}
+
+	key, _, _, _, err := deriveKeyFromOpts(opts, enc.KeySize())
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := enc.Encrypt(data, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(result.Nonce, result.Ciphertext...), nil
 }
 
 func encryptKEMBytes(data []byte, opts *EncryptFileOptions) ([]byte, error) {
@@ -489,4 +591,169 @@ func GenerateHPKEKeypair() (*KEMKeypair, error) {
 		PrivateSeed: privBytes,
 		PublicKey:   pubBytes,
 	}, nil
+}
+
+func GenerateHQC128Keypair() (*KEMKeypair, error) {
+	dk, err := hqc.GenerateKey128()
+	if err != nil {
+		return nil, err
+	}
+	return &KEMKeypair{
+		Algorithm:   AlgoHQC128,
+		PrivateSeed: dk.Bytes(),
+		PublicKey:   dk.EncapsulationKey().Bytes(),
+	}, nil
+}
+
+func GenerateFrodo640Keypair() (*KEMKeypair, error) {
+	fk := go_frodokem.Frodo640SHAKE()
+	pk, sk := fk.Keygen()
+	return &KEMKeypair{
+		Algorithm:   AlgoFrodo640SHAKE,
+		PrivateSeed: sk,
+		PublicKey:   pk,
+	}, nil
+}
+
+func ExtractPublicKey(keyPath string) (*KEMKeypair, error) {
+	data, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) == 64 {
+		if dk, err := mlkem.NewDecapsulationKey768(data); err == nil {
+			return &KEMKeypair{
+				Algorithm:   AlgoMLKEM768,
+				PrivateSeed: dk.Bytes(),
+				PublicKey:   dk.EncapsulationKey().Bytes(),
+			}, nil
+		}
+		if dk, err := mlkem.NewDecapsulationKey1024(data); err == nil {
+			return &KEMKeypair{
+				Algorithm:   AlgoMLKEM1024,
+				PrivateSeed: dk.Bytes(),
+				PublicKey:   dk.EncapsulationKey().Bytes(),
+			}, nil
+		}
+	}
+
+	if len(data) == 32 {
+		if dk, err := xwing.NewKeyFromSeed(data); err == nil {
+			return &KEMKeypair{
+				Algorithm:   AlgoHybridXWing,
+				PrivateSeed: dk.Bytes(),
+				PublicKey:   dk.EncapsulationKey(),
+			}, nil
+		}
+		suite := hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
+		kemID, _, _ := suite.Params()
+		scheme := kemID.Scheme()
+		pk, sk := scheme.DeriveKeyPair(data)
+		privBytes, err := sk.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		pubBytes, err := pk.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		return &KEMKeypair{
+			Algorithm:   AlgoHPKE,
+			PrivateSeed: privBytes,
+			PublicKey:   pubBytes,
+		}, nil
+	}
+
+	if len(data) == hqc.SecretKeySize128 {
+		if dk, err := hqc.ParseDecapsulationKey128(data); err == nil {
+			return &KEMKeypair{
+				Algorithm:   AlgoHQC128,
+				PrivateSeed: dk.Bytes(),
+				PublicKey:   dk.EncapsulationKey().Bytes(),
+			}, nil
+		}
+	}
+
+	return nil, errors.New("not a recognized KEM private key format")
+}
+
+func GenerateKeyPairFromSeed(algo AlgorithmID, seed []byte) (*KEMKeypair, error) {
+	switch algo {
+	case AlgoMLKEM768:
+		if len(seed) < 64 {
+			return nil, errors.New("seed too short for ML-KEM-768: need 64 bytes")
+		}
+		dk, err := mlkem.NewDecapsulationKey768(seed[:64])
+		if err != nil {
+			return nil, err
+		}
+		return &KEMKeypair{
+			Algorithm:   AlgoMLKEM768,
+			PrivateSeed: dk.Bytes(),
+			PublicKey:   dk.EncapsulationKey().Bytes(),
+		}, nil
+	case AlgoMLKEM1024:
+		if len(seed) < 64 {
+			return nil, errors.New("seed too short for ML-KEM-1024: need 64 bytes")
+		}
+		dk, err := mlkem.NewDecapsulationKey1024(seed[:64])
+		if err != nil {
+			return nil, err
+		}
+		return &KEMKeypair{
+			Algorithm:   AlgoMLKEM1024,
+			PrivateSeed: dk.Bytes(),
+			PublicKey:   dk.EncapsulationKey().Bytes(),
+		}, nil
+	case AlgoHybridXWing:
+		if len(seed) < 32 {
+			return nil, errors.New("seed too short for X-Wing: need 32 bytes")
+		}
+		dk, err := xwing.NewKeyFromSeed(seed[:32])
+		if err != nil {
+			return nil, err
+		}
+		return &KEMKeypair{
+			Algorithm:   AlgoHybridXWing,
+			PrivateSeed: dk.Bytes(),
+			PublicKey:   dk.EncapsulationKey(),
+		}, nil
+	case AlgoHPKE:
+		if len(seed) < 32 {
+			return nil, errors.New("seed too short for HPKE: need 32 bytes")
+		}
+		suite := hpke.NewSuite(hpke.KEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_ChaCha20Poly1305)
+		kemID, _, _ := suite.Params()
+		scheme := kemID.Scheme()
+		pk, sk := scheme.DeriveKeyPair(seed[:32])
+		privBytes, err := sk.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		pubBytes, err := pk.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		return &KEMKeypair{
+			Algorithm:   AlgoHPKE,
+			PrivateSeed: privBytes,
+			PublicKey:   pubBytes,
+		}, nil
+	case AlgoHQC128:
+		return nil, errors.New("seed-based HQC keygen not yet supported")
+	case AlgoFrodo640SHAKE:
+		fk := go_frodokem.Frodo640SHAKE()
+		fk.OverrideRng(func(b []byte) {
+			copy(b, seed)
+		})
+		pk, sk := fk.Keygen()
+		return &KEMKeypair{
+			Algorithm:   AlgoFrodo640SHAKE,
+			PrivateSeed: sk,
+			PublicKey:   pk,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported algorithm for seed-based keygen: %s", algo)
+	}
 }
